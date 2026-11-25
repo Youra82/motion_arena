@@ -12,7 +12,8 @@
     "typecheck": "tsc -b",
     "assets": "node scripts/fetch-assets.mjs",
     "e2e": "playwright test",
-    "dev:phone": "pnpm --filter @motion-arena/mobile-web dev:phone"
+    "dev:phone": "pnpm --filter @motion-arena/mobile-web dev:phone",
+    "screenshots": "playwright test --config playwright.screenshots.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",

@@ -11,3 +11,4 @@ playwright-report/
 
 # Rohe Codex-Sitzungsmitschnitte (enthalten lokale Pfade)
 docs/reviews/*.log
+tests/screenshots/.results/

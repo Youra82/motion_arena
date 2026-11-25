@@ -277,8 +277,8 @@ export class LiveEngine {
           sw: this.source === "camera" ? this.video.videoWidth || 1280 : 900,
           sh: this.source === "camera" ? this.video.videoHeight || 720 : 1600,
           mirror: this.source === "camera" && this.mirror,
-          // Kamera: ganzes ausgewertetes Bild zeigen (contain), damit sichtbar = erkannt.
-          fit: this.source === "camera" ? "contain" : "cover",
+          // Ganzes ausgewertetes Bild zeigen (contain), damit sichtbar = erkannt – auch im Querformat.
+          fit: "contain",
         },
         mode: state.viewMode,
         video: this.source === "camera" ? this.video : null,
