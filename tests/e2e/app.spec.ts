@@ -55,3 +55,22 @@ test("Kamera verweigert → verständlicher Fehlerzustand mit Ausweg", async ({ 
   await page.screenshot({ path: `${shots}/08-kamera-fehler.png` });
   await expect(page.getByRole("button", { name: "Demo ohne Kamera" })).toBeVisible();
 });
+
+test("PWA: Manifest und Icons sind eingebunden und erreichbar", async ({ page, request }) => {
+  await page.goto("/");
+  const href = await page.locator('link[rel="manifest"]').getAttribute("href");
+  expect(href).toBe("/manifest.webmanifest");
+  const res = await request.get(href!);
+  expect(res.ok()).toBe(true);
+  const manifest = await res.json();
+  expect(manifest).toMatchObject({ name: "Motion Arena", display: "standalone", start_url: "./" });
+  const sizes = manifest.icons.map((i: { sizes: string }) => i.sizes);
+  expect(sizes).toEqual(expect.arrayContaining(["192x192", "512x512"]));
+  for (const icon of manifest.icons as Array<{ src: string }>) {
+    const r = await request.get(`/${icon.src}`);
+    expect(r.ok(), icon.src).toBe(true);
+    expect(r.headers()["content-type"]).toContain("image/png");
+  }
+  const apple = await page.locator('link[rel="apple-touch-icon"]').getAttribute("href");
+  expect((await request.get(apple!)).ok()).toBe(true);
+});

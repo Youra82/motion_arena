@@ -25,8 +25,7 @@ Körperspiegelung.
 
 - [Funktionen](#funktionen)
 - [Galerie](#galerie)
-- [Schnellstart](#schnellstart)
-- [Auf dem Handy testen](#auf-dem-handy-testen)
+- [Installation](#installation) – Voraussetzungen, PC, Handy, Dauerbetrieb, [Fehlerbehebung](#fehlerbehebung)
 - [So funktioniert die Erkennung](#so-funktioniert-die-erkennung)
 - [Bewertung und Punkte](#bewertung-und-punkte)
 - [Architektur](#architektur)
@@ -53,6 +52,7 @@ Körperspiegelung.
 | **Spiel** | Punkte, Combo-Bonus bis +50 %, Ziel 5/10/15 Wiederholungen, Countdown, Pause, Ergebnisseite |
 | **Ansichten** | Hybrid (Video + Skelett), Echtbild, Silhouette (lokale Personenmaske), Skelett, Bewegungsspur, Avatar (Platzhalter). Wechsel jederzeit ohne Datenverlust |
 | **Signaturen** | Präzisionsring am Boden (zeigt die Beugetiefe, leuchtet bei gezählter Wiederholung), Bewegungsspur mit Nachbildern |
+| **Installierbar** | Web-App-Manifest und App-Icons: auf dem Handy „Zum Startbildschirm hinzufügen“, startet ohne Browserleiste |
 | **Demo-Modus** | Synthetische Kniebeugen ohne Kamera, deutlich als **DEMO** gekennzeichnet |
 | **Posen-Aufnahme** | Speichert nur Gelenkkoordinaten (keine Bilder) als Datei – für reproduzierbare Tests mit echten Bewegungen |
 | **Fehlerzustände** | Kamera verweigert / nicht vorhanden / belegt / getrennt, Modell lädt nicht, kein HTTPS – jeweils mit Ausweg (Erneut, Demo, Zurück); Laden jederzeit abbrechbar |
@@ -122,46 +122,160 @@ Visuelle Richtung für spätere Phasen – **keine** verwendbaren 3D-Modelle ode
 
 ---
 
-## Schnellstart
+## Installation
 
-Voraussetzungen: **Node.js ≥ 22** und **pnpm** (`npm i -g pnpm`).
+Der **PC** (Windows, macOS oder Linux) betreibt die App, das **Handy** öffnet sie im Browser und nutzt seine Kamera.
+Beide müssen im selben WLAN sein. Ohne Handy lässt sich alles auch am PC mit Webcam oder im Demo-Modus ausprobieren.
+
+### 1. Voraussetzungen
+
+| Was | Wofür | Prüfen |
+| --- | --- | --- |
+| **Node.js ≥ 22** (LTS) | baut und startet die App | `node -v` |
+| **pnpm** | Paketverwaltung des Projekts | `pnpm -v` |
+| **Git** | Projekt herunterladen | `git --version` |
+| **Internet beim ersten Start** | lädt einmalig die Pose-Modelle (~15 MB) | – |
+| **Google Chrome** (nur für `pnpm e2e` / `pnpm screenshots`) | automatische Browsertests | – |
+| **Handy** mit aktuellem Chrome (Android) oder Safari (iPhone) | Kamera und Anzeige | – |
+
+**Windows (mit Administratorrechten)** – in PowerShell:
+
+```powershell
+winget install OpenJS.NodeJS.LTS
+winget install Git.Git
+# PowerShell neu öffnen, dann:
+node -v                 # muss v22 oder neuer zeigen
+npm install -g pnpm
+pnpm -v
+```
+
+**Windows ohne Administratorrechte** – portable Node.js:
+
+1. Auf [nodejs.org/download](https://nodejs.org/en/download) die **Windows-Binary (.zip, x64)** der LTS-Version laden.
+2. Entpacken, z. B. nach `D:\tools\node` (der Ordner muss `node.exe` direkt enthalten).
+3. In PowerShell für die aktuelle Sitzung in den Pfad nehmen und pnpm in denselben Ordner installieren:
+
+   ```powershell
+   $env:PATH = "D:\tools\node;$env:PATH"
+   npm install -g pnpm --prefix D:\tools\node
+   pnpm -v
+   ```
+
+   Dauerhaft: *Systemsteuerung → System → Erweiterte Systemeinstellungen → Umgebungsvariablen →* `Path` des
+   Benutzers um `D:\tools\node` ergänzen.
+
+**macOS / Linux:** Node.js per Paketmanager (`brew install node`) oder [nvm](https://github.com/nvm-sh/nvm)
+installieren, dann `npm install -g pnpm`.
+
+### 2. Projekt herunterladen und einrichten
+
+Das Repository ist **privat** – zum Klonen muss dein GitHub-Konto Zugriff haben. Am einfachsten mit der
+[GitHub CLI](https://cli.github.com/) einmalig anmelden (`gh auth login`); sonst fragt Git beim Klonen nach der Anmeldung.
 
 ```bash
 git clone https://github.com/Youra82/motion_arena.git
 cd motion_arena
 pnpm install
-pnpm dev            # http://localhost:5173
 ```
 
-Beim ersten `dev` bzw. `build` lädt [`scripts/fetch-assets.mjs`](scripts/fetch-assets.mjs) einmalig die Pose-Modelle
-von Google (lite 5,8 MB, full 9,4 MB) nach `apps/mobile-web/public/models/` und kopiert die MediaPipe-WASM-Dateien
-aus `node_modules`. **Zur Laufzeit wird nichts von fremden Servern geladen.**
+`pnpm install` lädt alle Abhängigkeiten. Das nötige Build-Skript von `esbuild` ist in
+[`pnpm-workspace.yaml`](pnpm-workspace.yaml) bereits freigegeben, es ist keine Rückfrage nötig.
 
-Ohne Kamera ausprobieren: auf der Startseite **„Demo ohne Kamera ansehen“**.
+### 3a. Am PC ausprobieren
+
+```bash
+pnpm dev
+```
+
+`http://localhost:5173` im Browser öffnen. Beim **ersten** Start erscheint `[assets] lade pose_landmarker_… .task`:
+[`scripts/fetch-assets.mjs`](scripts/fetch-assets.mjs) lädt die Pose-Modelle (lite 5,8 MB, full 9,4 MB) einmalig nach
+`apps/mobile-web/public/models/` und kopiert die MediaPipe-WASM-Dateien. Danach wird **nichts mehr von fremden Servern
+geladen**. Auf `localhost` erlauben Browser die Webcam auch ohne HTTPS. Ohne Kamera: **„Demo ohne Kamera ansehen“**.
+
+### 3b. Am Handy nutzen
+
+Browser geben die Kamera nur über **HTTPS** frei (Ausnahme `localhost`). `dev:phone` startet deshalb einen
+HTTPS-Server mit selbstsigniertem Zertifikat, der im Heimnetz erreichbar ist.
+
+1. **PC und Handy ins selbe WLAN** bringen (kein Gast-WLAN – dort sind Geräte oft voneinander abgeschirmt).
+2. Am PC starten:
+
+   ```bash
+   pnpm dev:phone
+   ```
+
+3. Die Ausgabe listet unter **`Network:`** alle Adressen des PCs. Die aus deinem WLAN nehmen, meist
+   `https://192.168.x.x:5173`. (Eine VPN-Adresse wie Tailscale `100.x.x.x` funktioniert ebenfalls, wenn das Handy im
+   selben VPN ist.)
+4. **Windows-Firewall:** Beim ersten Start fragt Windows, ob Node.js im Netzwerk kommunizieren darf → für
+   **private Netzwerke erlauben**. Kam keine Abfrage und das Handy erreicht den PC nicht, einmalig in einer
+   PowerShell **als Administrator**:
+
+   ```powershell
+   New-NetFirewallRule -DisplayName "Motion Arena" -Direction Inbound -Protocol TCP -LocalPort 5173,4443 -Action Allow -Profile Private
+   ```
+
+5. Am Handy die Adresse öffnen. Die **Zertifikatswarnung ist erwartet** (selbstsigniert, nur in deinem Netz):
+   - Chrome (Android): *Erweitert → Weiter zu … (unsicher)*
+   - Safari (iPhone): *Details einblenden → diese Website besuchen → Website besuchen*
+6. **„▶ Training starten“** tippen und den **Kamerazugriff erlauben**.
+7. **Optional als App auf den Startbildschirm** (die App bringt Manifest und Icon mit):
+   - Android/Chrome: Menü *⋮ → App installieren* bzw. *Zum Startbildschirm hinzufügen*
+   - iPhone/Safari: *Teilen → Zum Home-Bildschirm*
+
+   Mit dem selbstsignierten Zertifikat bieten manche Browser nur eine Verknüpfung statt einer vollständigen
+   Installation an; die Funktion ist dieselbe.
+
+**Aufstellen:** Handy etwa auf Hüfthöhe, **2–3 m Abstand**, ganzer Körper von Kopf bis Fuß im Bild, gutes Licht von
+vorne. **Leicht schräg oder seitlich** zur Kamera ist am genauesten.
+
+### 3c. Dauerhaft betreiben (ohne Entwicklungsmodus)
+
+```bash
+pnpm start:phone     # baut die App und liefert sie per HTTPS aus: https://<IP-des-PCs>:4443
+```
+
+Das ist die schnelle, optimierte Fassung ohne Entwicklerwerkzeuge – geeignet, wenn die App z. B. auf einem Mini-PC
+im Heimnetz dauerhaft laufen soll. Alternativ ist `apps/mobile-web/dist/` nach `pnpm build` eine **rein statische
+Website** und kann auf jeden Webserver mit **HTTPS** gelegt werden (`.wasm` muss als `application/wasm` ausgeliefert
+werden; die Content-Security-Policy steckt bereits in der `index.html`).
+
+### 4. Prüfen, ob alles funktioniert
+
+```bash
+pnpm test                # Unit-Tests (Node, ohne Browser)
+pnpm typecheck           # TypeScript-Prüfung
+pnpm build && pnpm e2e   # Browsertests mit installiertem Chrome
+```
+
+### Alle Befehle
 
 | Befehl | Zweck |
 | --- | --- |
-| `pnpm dev` | Entwicklungsserver (localhost, Kamera erlaubt) |
-| `pnpm dev:phone` | HTTPS-Server im LAN für Handytests |
+| `pnpm dev` | Entwicklungsserver, `http://localhost:5173` |
+| `pnpm dev:phone` | Entwicklungsserver per HTTPS im Heimnetz, Port 5173 |
+| `pnpm start:phone` | Produktions-Build per HTTPS im Heimnetz, Port 4443 |
+| `pnpm build` | Produktions-Build nach `apps/mobile-web/dist` |
 | `pnpm test` | Vitest: Pose-Engine, Zähler, Bewertung, Session, Engine, echte Aufnahmen |
 | `pnpm typecheck` | strikte TypeScript-Prüfung aller Pakete |
-| `pnpm build` | Produktions-Build nach `apps/mobile-web/dist` |
-| `pnpm e2e` | Playwright-Browsertests (nutzt installiertes Chrome; vorher `pnpm build`) |
-| `pnpm screenshots` | erzeugt alle Galerie-Bilder neu nach `docs/screenshots/` (vorher `pnpm build`) |
+| `pnpm e2e` | Playwright-Browsertests (installiertes Chrome; vorher `pnpm build`) |
+| `pnpm screenshots` | erzeugt die Galerie-Bilder neu nach `docs/screenshots/` (vorher `pnpm build`) |
+| `pnpm icons` | erzeugt die App-Icons neu aus dem Logo |
 
----
+### Fehlerbehebung
 
-## Auf dem Handy testen
-
-Browser geben die Kamera nur über **HTTPS** oder `localhost` frei.
-
-```bash
-pnpm dev:phone      # HTTPS mit selbstsigniertem Zertifikat, im LAN erreichbar
-```
-
-1. Am Handy `https://<IP-des-PCs>:5173` öffnen, Zertifikatswarnung bestätigen, Kamera erlauben.
-2. Handy etwa auf Hüfthöhe aufstellen, **2–3 m Abstand**, ganzer Körper im Bild.
-3. Gutes Licht von vorne; **leicht schräg oder seitlich** zur Kamera ist am genauesten.
+| Problem | Ursache und Lösung |
+| --- | --- |
+| „Kamera nur über HTTPS oder localhost verfügbar“ | Seite über `http://` oder IP ohne HTTPS geöffnet → `pnpm dev:phone` starten und die `https://`-Adresse nutzen |
+| „Kein Kamerazugriff“ | Berechtigung abgelehnt → im Browser bei der Seite (Schloss-/Info-Symbol) Kamera erlauben; iPhone zusätzlich *Einstellungen → Safari → Kamera* |
+| „Kamera wird von einer anderen App benutzt“ | Videokonferenz- oder Kamera-App schließen, dann „Erneut versuchen“ |
+| Handy erreicht den PC nicht | Selbes WLAN? Kein Gast-WLAN? Richtige `Network`-Adresse mit `https://` und Port? Firewall-Regel aus Schritt 3b |
+| „Pose-Modell konnte nicht geladen werden“ | Beim ersten Start fehlte Internet → `apps/mobile-web/public/models/` löschen und `pnpm dev` erneut starten |
+| `pnpm` bzw. `node` wird nicht gefunden | PowerShell neu öffnen; bei portabler Version `$env:PATH` wie in Schritt 1 setzen |
+| Port 5173 belegt | anderes Programm beenden oder `pnpm --filter @motion-arena/mobile-web exec vite --port 5174` |
+| Ständig „Keine Person“ / „Teilkörper“ | weiter weg (2–3 m), Kopf bis Füße im Bild, mehr Licht, ruhiger Hintergrund |
+| Ruckelt (niedrige fps) | Startseite: Modell **„Schnell (lite)“**; Ansicht **Skelett** statt Silhouette |
+| `pnpm e2e` findet keinen Browser | Google Chrome installieren (die Tests nutzen das installierte Chrome) |
 
 ---
 

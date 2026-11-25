@@ -1,0 +1,17 @@
+{
+  "name": "Motion Arena",
+  "short_name": "Motion Arena",
+  "description": "Kniebeugen mit der Handykamera zählen und bewerten – alles lokal auf dem Gerät.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101A1D",
+  "theme_color": "#101A1D",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
