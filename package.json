@@ -15,12 +15,16 @@
     "dev:phone": "pnpm --filter @motion-arena/mobile-web dev:phone",
     "screenshots": "playwright test --config playwright.screenshots.config.ts",
     "start:phone": "pnpm build && pnpm --filter @motion-arena/mobile-web preview:phone",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "qr": "node scripts/make-qr.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",
     "@types/node": "^26.6.6",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
   }
 }

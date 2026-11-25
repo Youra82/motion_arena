@@ -7,7 +7,17 @@ Alles läuft lokal auf dem Gerät – kein Kamerabild und keine Bewegungsdaten v
 Designrichtung **Kinetic Studio**: dunkles Petrol/Graphit, warmes Weiß, Korallorange als Akzent, Türkis für die
 Körperspiegelung.
 
-> **Stand:** Phase 1 – Smartphone-MVP mit der Übung Kniebeuge. Die Logik ist mit 93 Unit-Tests und 4 Browsertests
+<table align="center"><tr>
+<td align="center" width="200"><img src="docs/qr-handy.png" width="180" alt="QR-Code zur App" /></td>
+<td>
+<b>📲 Auf dem Handy installieren:</b> QR-Code mit der Handykamera scannen<br/>
+oder <a href="https://youra82.github.io/motion_arena/?install=1"><b>youra82.github.io/motion_arena</b></a> öffnen →
+„Jetzt installieren“ (Android) bzw. Teilen → „Zum Home-Bildschirm“ (iPhone).<br/>
+<sub>Kein PC nötig, danach auch offline. Kamera und Erkennung laufen nur auf dem Handy.</sub>
+</td>
+</tr></table>
+
+> **Stand:** Phase 1 – Smartphone-MVP mit der Übung Kniebeuge. Die Logik ist mit 93 Unit-Tests und 9 Browsertests
 > abgesichert und wurde in zwei unabhängigen Prüfrunden (Codex) gehärtet. **Noch nicht erfolgt:** der Test mit einer
 > echten Person vor einer echten Handykamera – siehe [Status](docs/STATUS.md).
 
@@ -25,7 +35,7 @@ Körperspiegelung.
 
 - [Funktionen](#funktionen)
 - [Galerie](#galerie)
-- [Installation](#installation) – Voraussetzungen, PC, Handy, Dauerbetrieb, [Fehlerbehebung](#fehlerbehebung)
+- [Installation](#installation) – Handy per QR-Code, Windows automatisch, manuell, Dauerbetrieb, [Fehlerbehebung](#fehlerbehebung)
 - [So funktioniert die Erkennung](#so-funktioniert-die-erkennung)
 - [Bewertung und Punkte](#bewertung-und-punkte)
 - [Architektur](#architektur)
@@ -52,7 +62,7 @@ Körperspiegelung.
 | **Spiel** | Punkte, Combo-Bonus bis +50 %, Ziel 5/10/15 Wiederholungen, Countdown, Pause, Ergebnisseite |
 | **Ansichten** | Hybrid (Video + Skelett), Echtbild, Silhouette (lokale Personenmaske), Skelett, Bewegungsspur, Avatar (Platzhalter). Wechsel jederzeit ohne Datenverlust |
 | **Signaturen** | Präzisionsring am Boden (zeigt die Beugetiefe, leuchtet bei gezählter Wiederholung), Bewegungsspur mit Nachbildern |
-| **Installierbar** | Web-App-Manifest und App-Icons: auf dem Handy „Zum Startbildschirm hinzufügen“, startet ohne Browserleiste |
+| **Installierbar** | Per QR-Code auf dem Handy installieren: Android mit einem Tipp („Jetzt installieren“), iPhone mit geführter Anleitung. Startet ohne Browserleiste und funktioniert danach **offline** (Service Worker speichert App, Erkennung und Modell) |
 | **Demo-Modus** | Synthetische Kniebeugen ohne Kamera, deutlich als **DEMO** gekennzeichnet |
 | **Posen-Aufnahme** | Speichert nur Gelenkkoordinaten (keine Bilder) als Datei – für reproduzierbare Tests mit echten Bewegungen |
 | **Fehlerzustände** | Kamera verweigert / nicht vorhanden / belegt / getrennt, Modell lädt nicht, kein HTTPS – jeweils mit Ausweg (Erneut, Demo, Zurück); Laden jederzeit abbrechbar |
@@ -97,6 +107,16 @@ Jeder Bildschirm und Zustand, den die App darstellen kann. Die Bilder erzeugt `p
 <tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/16-fehler-kamera-verweigert.png" width="230" alt="Kamera verweigert" /><br/><b>Kamera verweigert</b><br/><sub>Verständlicher Fehler mit Ausweg: erneut, Demo oder zurück</sub></td></tr>
 </table>
 
+### Installation auf dem Handy
+
+<table>
+<tr>
+<td align="center" valign="top" width="33%"><img src="docs/screenshots/22-installieren-android.png" width="230" alt="Installieren Android" /><br/><b>Android</b><br/><sub>Nach dem QR-Scan: hervorgehobene Karte, ein Tipp öffnet den Installationsdialog</sub></td>
+<td align="center" valign="top" width="33%"><img src="docs/screenshots/23-installieren-iphone.png" width="230" alt="Installieren iPhone" /><br/><b>iPhone</b><br/><sub>Geführte Schritte über Teilen → „Zum Home-Bildschirm“</sub></td>
+<td align="center" valign="top" width="33%"><img src="docs/qr-handy.png" width="200" alt="QR-Code" /><br/><b>QR-Code</b><br/><sub>Führt direkt zur installierbaren App</sub></td>
+</tr>
+</table>
+
 ### Querformat
 
 <p align="center"><img src="docs/screenshots/15-querformat-training.png" width="760" alt="Training im Querformat" /><br/>
@@ -126,6 +146,65 @@ Visuelle Richtung für spätere Phasen – **keine** verwendbaren 3D-Modelle ode
 
 Der **PC** (Windows, macOS oder Linux) betreibt die App, das **Handy** öffnet sie im Browser und nutzt seine Kamera.
 Beide müssen im selben WLAN sein. Ohne Handy lässt sich alles auch am PC mit Webcam oder im Demo-Modus ausprobieren.
+
+### Auf dem Handy installieren (ohne PC) – am einfachsten
+
+Die App ist auf **GitHub Pages** veröffentlicht: <https://youra82.github.io/motion_arena/>.
+Sie ist eine reine Web-App – der Server liefert nur die Dateien aus; **Kamera, Erkennung und Bewertung laufen
+ausschließlich auf dem Handy**.
+
+1. Den **QR-Code** oben mit der Handykamera scannen (oder die Adresse eintippen).
+2. Oben erscheint die Karte **„Als App installieren“**:
+   - **Android (Chrome, Edge, Samsung Internet):** **„📲 Jetzt installieren“** tippen → bestätigen.
+   - **iPhone (Safari):** **Teilen** → **„Zum Home-Bildschirm“** → **„Hinzufügen“**.
+3. **Motion Arena** vom Startbildschirm öffnen, „Training starten“, Kamera erlauben.
+
+Beim ersten Öffnen speichert die App sich selbst, die Erkennung und das schnelle Modell (~16 MB) auf dem Handy –
+danach funktioniert sie **ohne Internet**. Updates kommen automatisch beim nächsten Öffnen mit Internet.
+Jeder Push auf `main` baut, prüft und veröffentlicht die App neu
+([`.github/workflows/pages.yml`](.github/workflows/pages.yml)).
+
+> Ein Browser darf eine Web-App nie ohne Zustimmung installieren – ein Tipp bzw. die drei Schritte auf dem iPhone
+> sind das Minimum. Die Installation braucht eine Adresse mit echtem HTTPS-Zertifikat; deshalb klappt sie über
+> GitHub Pages, aber nicht über den selbstsignierten Heimnetz-Server unten.
+
+### Automatische Installation am PC (Windows)
+
+Nur nötig, wenn die App **vom eigenen PC** laufen soll – z. B. ohne Internet im Heimnetz, zum Entwickeln oder für
+die Browsertests.
+
+Wie bei einem Spiel: einmal doppelklicken, alles andere passiert von selbst. **Keine Administratorrechte nötig.**
+Der Start zeigt zusätzlich den QR-Code zur installierbaren App.
+
+1. **Projekt herunterladen:** auf GitHub angemeldet *Code → Download ZIP* und die ZIP-Datei entpacken
+   (oder `git clone https://github.com/Youra82/motion_arena.git`).
+2. Im Projektordner **`Installieren.bat`** doppelklicken. Das Skript
+   - prüft, ob Node.js ≥ 22 vorhanden ist – sonst lädt es eine eigene Kopie von nodejs.org, **prüft die
+     SHA-256-Prüfsumme** und legt sie nur für Motion Arena unter `%LOCALAPPDATA%\MotionArena\tools` ab
+     (keine Systemänderung),
+   - richtet pnpm ein, installiert alle Abhängigkeiten, lädt die Erkennungsmodelle und baut die App,
+   - fragt, ob es die **Firewall-Freigabe** fürs Handy einrichten soll (nur dafür fragt Windows einmal nach
+     Administratorrechten; ablehnen ist möglich),
+   - legt die Verknüpfung **„Motion Arena“ auf dem Desktop** an.
+3. **„Motion Arena“ auf dem Desktop** doppelklicken: Der Server startet, im Fenster und im Browser erscheint ein
+   **QR-Code** – mit dem Handy scannen, Zertifikatswarnung bestätigen, Kamera erlauben, loslegen.
+   Das schwarze Fenster offen lassen; Schließen beendet Motion Arena.
+
+<p align="center"><img src="docs/screenshots/21-verbinden-qr-code.png" width="640" alt="Verbindungsseite mit QR-Code" /><br/>
+<sub>Die Verbindungsseite nach dem Start: Hauptadresse im Heimnetz plus Alternativen (Beispieladressen).</sub></p>
+
+| Datei | Zweck |
+| --- | --- |
+| `Installieren.bat` | installiert alles; **erneut ausführen = aktualisieren** (z. B. nach neuem Download) |
+| `Motion Arena starten.bat` | dasselbe wie die Desktop-Verknüpfung |
+| `Deinstallieren.bat` | entfernt Verknüpfung, heruntergeladene Werkzeuge und Firewall-Freigabe; danach den Projektordner löschen |
+
+> **Hinweis „Der Computer wurde durch Windows geschützt“:** Bei aus dem Internet geladenen `.bat`-Dateien zeigt
+> Windows SmartScreen diese Warnung. *Weitere Informationen → Trotzdem ausführen.* Die Skripte liegen offen lesbar in
+> [`scripts/windows/`](scripts/windows/).
+
+Die folgenden Schritte beschreiben die **manuelle Installation** – für macOS/Linux oder wenn du jeden Schritt selbst
+steuern willst.
 
 ### 1. Voraussetzungen
 
@@ -261,6 +340,7 @@ pnpm build && pnpm e2e   # Browsertests mit installiertem Chrome
 | `pnpm e2e` | Playwright-Browsertests (installiertes Chrome; vorher `pnpm build`) |
 | `pnpm screenshots` | erzeugt die Galerie-Bilder neu nach `docs/screenshots/` (vorher `pnpm build`) |
 | `pnpm icons` | erzeugt die App-Icons neu aus dem Logo |
+| `pnpm qr` | erzeugt den QR-Code `docs/qr-handy.png` zur veröffentlichten App |
 
 ### Fehlerbehebung
 
@@ -404,7 +484,10 @@ motion_arena/
 ## Datenschutz
 
 - Kamerabilder werden **ausschließlich im Browser auf dem Gerät** verarbeitet – nicht gespeichert, nicht übertragen.
-- Modelle und WASM werden vom eigenen Server ausgeliefert, nicht von einem CDN.
+- Modelle und WASM werden vom eigenen Server ausgeliefert, nicht von einem CDN. Auf GitHub Pages liefert GitHub
+  nur die statischen Dateien aus – es gibt kein Backend, keine Anmeldung, keine Analyse-Tools.
+- Nach der Installation hält ein Service Worker App und Modell auf dem Gerät vor; es werden dabei nur die
+  App-Dateien selbst gespeichert, keine Kamerabilder oder Ergebnisse.
 - **MediaPipe-Telemetrie blockiert:** `@mediapipe/tasks-vision` 1.2.3 versucht beim Schließen, Nutzungsmetriken an
   `odml.pa.googleapis.com` zu senden. Eine **Content-Security-Policy** ([`vite.config.ts`](apps/mobile-web/vite.config.ts))
   erlaubt nur Verbindungen zum eigenen Server und blockiert das. Ein Browsertest zeichnet den gesamten Netzwerkverkehr
@@ -417,7 +500,7 @@ motion_arena/
 
 ```bash
 pnpm test        # 93 Tests
-pnpm build && pnpm e2e   # 4 Browsertests
+pnpm build && pnpm e2e   # 9 Browsertests
 ```
 
 | Ebene | Inhalt |
@@ -426,7 +509,7 @@ pnpm build && pnpm e2e   # 4 Browsertests
 | **Zähler** | Definition of Done „3 saubere Kniebeugen = 3“ in 5 Kamera-Varianten und mit 20 Rausch-Seeds; Wippen, Zittern, zu flach/schnell/langsam/tief, Teilkörper, Verschwinden in der Hocke, Abstandsänderung, Drehung, Zeitstempel-Fehler, Lücken, Ausreißer, Messquellenwechsel |
 | **Session** | Punkte, Combo, Fehlversuche, Erkennungsaussetzer ohne Strafe, Pause ohne Zeitzählung |
 | **Engine** | Abbruch während Kamera-/Modellladen, React-StrictMode-Doppelstart, Fehler im Lauf, Masken-Umschaltung, GPU→CPU, Pause zwischen zwei Bildern, Ziel-Timer (MediaPipe-Attrappe) |
-| **Browser** | Kompletter Demo-Ablauf inkl. Ansichtswechsel ohne Datenverlust; echte MediaPipe-Erkennung mit Chrome-Testkamera; verweigerte Kamera; Laden abbrechen; Netzwerk-Nachweis Datenschutz |
+| **Browser** | Kompletter Demo-Ablauf inkl. Ansichtswechsel ohne Datenverlust; echte MediaPipe-Erkennung mit Chrome-Testkamera; verweigerte Kamera; Laden abbrechen; Netzwerk-Nachweis Datenschutz; Manifest/Icons; **Service Worker mit Offline-Start**; Installationskarte für Android (Installationsdialog) und iPhone (Anleitung) |
 
 Die Bewegungstests nutzen einen **synthetischen Posen-Generator** (`synthPose`, `synthSequence`) mit realistischen
 Proportionen, Front- und Seitenansicht, 3D-Weltkoordinaten, Rauschen, Verdeckung und Kameradrehung.

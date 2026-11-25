@@ -1,6 +1,6 @@
 // Erzeugt die App-Icons (PNG) aus dem eigenen Logo – einmalig, Ergebnis liegt im Repo.
 import { chromium } from "@playwright/test";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 
 const out = "apps/mobile-web/public/icons";
 mkdirSync(out, { recursive: true });
@@ -22,4 +22,24 @@ for (const [name, size] of [["icon-192.png", 192], ["icon-512.png", 512], ["appl
   await page.screenshot({ path: `${out}/${name}`, omitBackground: false });
   console.log(`${name} ${size}px`);
 }
+
+// Windows-Icon für die Desktop-Verknüpfung: ICO-Container mit eingebettetem 256-px-PNG (ab Windows Vista).
+await page.setViewportSize({ width: 256, height: 256 });
+await page.setContent(`<html><body style="margin:0">${svg(256)}</body></html>`);
+const png = await page.screenshot();
+const header = Buffer.alloc(6 + 16);
+header.writeUInt16LE(0, 0); // reserviert
+header.writeUInt16LE(1, 2); // Typ: Icon
+header.writeUInt16LE(1, 4); // Anzahl Bilder
+header.writeUInt8(0, 6); // Breite 256 (0 = 256)
+header.writeUInt8(0, 7); // Höhe 256
+header.writeUInt8(0, 8); // keine Palette
+header.writeUInt8(0, 9);
+header.writeUInt16LE(1, 10); // Farbebenen
+header.writeUInt16LE(32, 12); // Bit pro Pixel
+header.writeUInt32LE(png.length, 14);
+header.writeUInt32LE(22, 18); // Offset der Bilddaten
+mkdirSync("scripts/windows", { recursive: true });
+writeFileSync("scripts/windows/motion-arena.ico", Buffer.concat([header, png]));
+console.log("scripts/windows/motion-arena.ico 256px");
 await browser.close();

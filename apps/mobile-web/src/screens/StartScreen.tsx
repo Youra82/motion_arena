@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { actions, useApp } from "../store";
+import { InstallCard } from "./InstallCard";
 
 export function BrandMark() {
   // Eigene Wort-/Bildmarke: zwei versetzte Bewegungsbalken (keine Fremdmarke).
@@ -27,6 +28,8 @@ export function StartScreen() {
           <div className="brand-sub">Kinetic Studio</div>
         </div>
       </header>
+
+      <InstallCard />
 
       <section className="hero">
         <p className="eyebrow">Core Studio · Kraft &amp; Stabilität</p>

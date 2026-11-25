@@ -15,6 +15,8 @@ Stand: 25.11.2026. Gebaut von Claude Code, geprüft in zwei Runden von Codex (`d
 | Engine-Lebenszyklus: Abbruch während Kamera-/Modell-Laden, React-StrictMode-Doppelstart, Fehler im laufenden Betrieb, Kamera getrennt, Masken-Umschaltung, Ziel-Timer | Vitest mit MediaPipe-Attrappe (Codex-Runde 2) | grün |
 | **Datenschutz:** keine einzige Anfrage verlässt das Gerät (Start, Silhouette, Beenden) | Playwright mit Netzwerkmitschnitt + CSP | grün – MediaPipe-Telemetrie an `odml.pa.googleapis.com` wird per CSP blockiert |
 | Laden abbrechen → zurück zum Start | Playwright | grün |
+| Installierbare Web-App: Manifest/Icons, Service Worker, **Offline-Start**, Installationskarte Android (Installationsdialog) und iPhone (Anleitung), Unterpfad `/motion_arena/` für GitHub Pages | Playwright + Unterpfad-Prüfung mit Chrome-Testkamera | grün |
+| Windows-Installer (`Installieren.bat`): Node-Download mit Prüfsumme, pnpm, Build, Verknüpfung; Start mit QR-Code; Aktualisieren; Deinstallieren | echter Lauf in isolierter Kopie | grün (Firewall-Dialog und SmartScreen nicht automatisiert prüfbar) |
 | Kalibrierung: ruhiger Stand, Neustart bei Bewegung/Lücke/Hocke, Blickwinkel-Erkennung | Vitest | grün |
 | Bewertung, Combo, Pause/Fortsetzen, Zusammenfassung | Vitest | grün |
 | Kompletter UI-Ablauf Start → Kalibrierung → Countdown → Training → Ansichtswechsel (Zähler/Punkte bleiben) → Pause → Ergebnis | Playwright, Chrome headless, Demo-Quelle | grün, keine Konsolenfehler |
@@ -22,13 +24,14 @@ Stand: 25.11.2026. Gebaut von Claude Code, geprüft in zwei Runden von Codex (`d
 | Kamerazugriff verweigert → Fehlerzustand mit Ausweg (Erneut / Demo / Zurück) | Playwright | grün |
 | Typprüfung strikt, Produktions-Build | `tsc -b`, `vite build` | grün |
 
-Gesamt: **93 Vitest-Tests grün** (eigene Tests + Codex-Tests aus `test/codex/` und `LiveEngine-r2.test.ts`), 1 Aufnahme-Suite wartet auf echte Daten; **4 Playwright-Tests grün**.
+Gesamt: **93 Vitest-Tests grün** (eigene Tests + Codex-Tests aus `test/codex/` und `LiveEngine-r2.test.ts`), 1 Aufnahme-Suite wartet auf echte Daten; **9 Playwright-Tests grün**.
 
 ## Noch NICHT getestet (vor Freigabe nötig)
 
 - **Echte Person vor echter Kamera.** Alle Zählertests nutzen synthetische Posen. Die Definition of Done verlangt
   „echte Geräte manuell geprüft“ – offen. Vorgehen: siehe unten „Echte Aufnahmen als Testfälle“.
 - Leistung auf Handys (fps, Wärme, Akku), iOS Safari, Android Chrome, Lichtverhältnisse, Kleidung, Hintergrund.
+- Installation auf einem echten Handy (Android-Installationsdialog, iPhone „Zum Home-Bildschirm“) und Offline-Betrieb dort.
 - Silhouette (Personenmaske) nur kompiliert und im Code geprüft, nicht mit echter Person gesehen.
 - Schwellenwerte (Zähltiefe ≈ Kniewinkel 125–130°, „gut“ ≈ Oberschenkel waagerecht) sind Annahmen, nicht an echten
   Menschen kalibriert.
