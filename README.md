@@ -153,11 +153,25 @@ Die App ist auf **GitHub Pages** veröffentlicht: <https://youra82.github.io/mot
 Sie ist eine reine Web-App – der Server liefert nur die Dateien aus; **Kamera, Erkennung und Bewertung laufen
 ausschließlich auf dem Handy**.
 
-1. Den **QR-Code** oben mit der Handykamera scannen (oder die Adresse eintippen).
-2. Oben erscheint die Karte **„Als App installieren“**:
-   - **Android (Chrome, Edge, Samsung Internet):** **„📲 Jetzt installieren“** tippen → bestätigen.
-   - **iPhone (Safari):** **Teilen** → **„Zum Home-Bildschirm“** → **„Hinzufügen“**.
-3. **Motion Arena** vom Startbildschirm öffnen, „Training starten“, Kamera erlauben.
+**Schritt 1 – QR-Code scannen.** Die Kamera-App des Handys öffnen, auf den QR-Code richten und den angezeigten Link
+antippen (oder <https://youra82.github.io/motion_arena/?install=1> eintippen).
+
+<p align="center"><img src="docs/qr-handy.png" width="200" alt="QR-Code zur App" /></p>
+
+**Schritt 2 – „Als App installieren“.** Oben auf der Seite erscheint eine hervorgehobene Karte:
+
+<table>
+<tr>
+<td align="center" valign="top" width="50%"><img src="docs/screenshots/22-installieren-android.png" width="260" alt="Android: Jetzt installieren" /><br/>
+<b>Android</b> (Chrome, Edge, Samsung Internet)<br/><sub><b>„📲 Jetzt installieren“</b> tippen → im Dialog des Browsers <b>„Installieren“</b> bestätigen.</sub></td>
+<td align="center" valign="top" width="50%"><img src="docs/screenshots/23-installieren-iphone.png" width="260" alt="iPhone: Anleitung" /><br/>
+<b>iPhone</b> (Safari)<br/><sub>Unten auf <b>Teilen</b> → <b>„Zum Home-Bildschirm“</b> → oben rechts <b>„Hinzufügen“</b>.</sub></td>
+</tr>
+</table>
+
+**Schritt 3 – App starten.** **Motion Arena** liegt jetzt auf dem Startbildschirm. Öffnen, **„▶ Training starten“**
+tippen und den **Kamerazugriff erlauben**. Danach führt die App durch Kalibrierung und Countdown
+(siehe [Galerie](#galerie)).
 
 Beim ersten Öffnen speichert die App sich selbst, die Erkennung und das schnelle Modell (~16 MB) auf dem Handy –
 danach funktioniert sie **ohne Internet**. Updates kommen automatisch beim nächsten Öffnen mit Internet.
@@ -167,31 +181,57 @@ Jeder Push auf `main` baut, prüft und veröffentlicht die App neu
 > Ein Browser darf eine Web-App nie ohne Zustimmung installieren – ein Tipp bzw. die drei Schritte auf dem iPhone
 > sind das Minimum. Die Installation braucht eine Adresse mit echtem HTTPS-Zertifikat; deshalb klappt sie über
 > GitHub Pages, aber nicht über den selbstsignierten Heimnetz-Server unten.
+>
+> *Zu den Bildern:* Die Karten oben sind echte Aufnahmen der App im Handyformat. Den Installationsdialog von Android,
+> das Teilen-Menü des iPhones und die Kamera-Freigabe zeigt das Betriebssystem selbst – sie sind hier nicht
+> abgebildet, weil sie sich nur auf echten Geräten aufnehmen lassen.
 
 ### Automatische Installation am PC (Windows)
 
 Nur nötig, wenn die App **vom eigenen PC** laufen soll – z. B. ohne Internet im Heimnetz, zum Entwickeln oder für
-die Browsertests.
+die Browsertests. Wie bei einem Spiel: einmal doppelklicken, alles andere passiert von selbst.
+**Keine Administratorrechte nötig.**
 
-Wie bei einem Spiel: einmal doppelklicken, alles andere passiert von selbst. **Keine Administratorrechte nötig.**
-Der Start zeigt zusätzlich den QR-Code zur installierbaren App.
+**Schritt 1 – Projekt herunterladen.** Auf der GitHub-Seite oben rechts **„Code“** → **„Download ZIP“** und die
+ZIP-Datei entpacken (Rechtsklick → *Alle extrahieren*). Alternativ `git clone https://github.com/Youra82/motion_arena.git`.
 
-1. **Projekt herunterladen:** auf GitHub *Code → Download ZIP* und die ZIP-Datei entpacken
-   (oder `git clone https://github.com/Youra82/motion_arena.git`).
-2. Im Projektordner **`Installieren.bat`** doppelklicken. Das Skript
-   - prüft, ob Node.js ≥ 22 vorhanden ist – sonst lädt es eine eigene Kopie von nodejs.org, **prüft die
-     SHA-256-Prüfsumme** und legt sie nur für Motion Arena unter `%LOCALAPPDATA%\MotionArena\tools` ab
-     (keine Systemänderung),
-   - richtet pnpm ein, installiert alle Abhängigkeiten, lädt die Erkennungsmodelle und baut die App,
-   - fragt, ob es die **Firewall-Freigabe** fürs Handy einrichten soll (nur dafür fragt Windows einmal nach
-     Administratorrechten; ablehnen ist möglich),
-   - legt die Verknüpfung **„Motion Arena“ auf dem Desktop** an.
-3. **„Motion Arena“ auf dem Desktop** doppelklicken: Der Server startet, im Fenster und im Browser erscheint ein
-   **QR-Code** – mit dem Handy scannen, Zertifikatswarnung bestätigen, Kamera erlauben, loslegen.
-   Das schwarze Fenster offen lassen; Schließen beendet Motion Arena.
+<p align="center"><img src="docs/install/01-github-download-zip.png" width="760" alt="GitHub: Code → Download ZIP" /></p>
 
-<p align="center"><img src="docs/screenshots/21-verbinden-qr-code.png" width="640" alt="Verbindungsseite mit QR-Code" /><br/>
-<sub>Die Verbindungsseite nach dem Start: Hauptadresse im Heimnetz plus Alternativen (Beispieladressen).</sub></p>
+**Schritt 2 – `Installieren.bat` doppelklicken.** Im entpackten Ordner `motion_arena-main` die Datei
+**`Installieren.bat`** doppelklicken. Erscheint *„Der Computer wurde durch Windows geschützt“* (SmartScreen bei aus dem
+Internet geladenen Dateien): *Weitere Informationen → Trotzdem ausführen*. Ein Fenster öffnet sich und arbeitet sechs
+Schritte ab:
+
+1. **Node.js prüfen** – fehlt es, wird eine eigene Kopie von nodejs.org geladen, die **SHA-256-Prüfsumme** kontrolliert
+   und nur für Motion Arena unter `%LOCALAPPDATA%\MotionArena\tools` abgelegt (keine Systemänderung).
+2. **pnpm einrichten**, 3. **Abhängigkeiten installieren**, 4. **App bauen** und Erkennungsmodelle laden.
+5. **Firewall-Frage:** `J` + Enter richtet die Freigabe fürs Handy im Heimnetz ein (Windows fragt dann einmal nach
+   Administratorrechten), `n` überspringt sie. Wer nur den QR-Code zur installierbaren App nutzt, braucht sie nicht.
+6. **Desktop-Verknüpfung „Motion Arena“** anlegen.
+
+<table>
+<tr>
+<td align="center" valign="top" width="50%"><img src="docs/install/02-installieren-firewall-frage.png" width="420" alt="Installation: Firewall-Frage" /><br/>
+<sub>Schritte 1–4 erledigt, das Fenster wartet auf die Antwort zur Firewall-Freigabe.</sub></td>
+<td align="center" valign="top" width="50%"><img src="docs/install/03-installieren-fertig.png" width="420" alt="Installation fertig" /><br/>
+<sub>Fertig – beliebige Taste schließt das Fenster.</sub></td>
+</tr>
+</table>
+
+**Schritt 3 – „Motion Arena“ auf dem Desktop doppelklicken.** Das Fenster zeigt den **QR-Code** – mit dem Handy
+scannen und wie [oben](#auf-dem-handy-installieren-ohne-pc--am-einfachsten) installieren. Zusätzlich öffnet sich im
+Browser die Verbindungsseite: links der **empfohlene QR-Code** zur installierbaren App, daneben die Adressen im
+Heimnetz (laufen über diesen PC, mit Zertifikatswarnung, ohne echte Installation). Das schwarze Fenster offen lassen,
+solange die Heimnetz-Adressen genutzt werden; Schließen beendet sie.
+
+<table>
+<tr>
+<td align="center" valign="top" width="45%"><img src="docs/install/04-start-qr-code.png" width="420" alt="Startfenster mit QR-Code" /><br/>
+<sub>Startfenster mit QR-Code (Ausschnitt; die Zeilen mit den Heimnetz-Adressen sind abgeschnitten).</sub></td>
+<td align="center" valign="top" width="55%"><img src="docs/screenshots/21-verbinden-qr-code.png" width="460" alt="Verbindungsseite mit QR-Codes" /><br/>
+<sub>Verbindungsseite im Browser (Heimnetz-Adressen hier Beispiele).</sub></td>
+</tr>
+</table>
 
 | Datei | Zweck |
 | --- | --- |
@@ -199,9 +239,11 @@ Der Start zeigt zusätzlich den QR-Code zur installierbaren App.
 | `Motion Arena starten.bat` | dasselbe wie die Desktop-Verknüpfung |
 | `Deinstallieren.bat` | entfernt Verknüpfung, heruntergeladene Werkzeuge und Firewall-Freigabe; danach den Projektordner löschen |
 
-> **Hinweis „Der Computer wurde durch Windows geschützt“:** Bei aus dem Internet geladenen `.bat`-Dateien zeigt
-> Windows SmartScreen diese Warnung. *Weitere Informationen → Trotzdem ausführen.* Die Skripte liegen offen lesbar in
-> [`scripts/windows/`](scripts/windows/).
+Die Skripte liegen offen lesbar in [`scripts/windows/`](scripts/windows/).
+
+<sub>Die Fensterbilder stammen aus einem echten Lauf von `Installieren.bat` in einem frisch entpackten ZIP
+(Ordner `D:\MotionArena-Demo`); bei dir stehen dort deine Pfade. SmartScreen- und Administrator-Abfrage zeigt Windows
+selbst – sie sind nicht abgebildet.</sub>
 
 Die folgenden Schritte beschreiben die **manuelle Installation** – für macOS/Linux oder wenn du jeden Schritt selbst
 steuern willst.
@@ -297,6 +339,14 @@ HTTPS-Server mit selbstsigniertem Zertifikat, der im Heimnetz erreichbar ist.
 5. Am Handy die Adresse öffnen. Die **Zertifikatswarnung ist erwartet** (selbstsigniert, nur in deinem Netz):
    - Chrome (Android): *Erweitert → Weiter zu … (unsicher)*
    - Safari (iPhone): *Details einblenden → diese Website besuchen → Website besuchen*
+
+   <table>
+   <tr>
+   <td align="center" valign="top" width="50%"><img src="docs/install/05-zertifikat-warnung.png" width="220" alt="Zertifikatswarnung" /><br/><sub>① <b>„Erweitert“</b> tippen</sub></td>
+   <td align="center" valign="top" width="50%"><img src="docs/install/06-zertifikat-erweitert.png" width="220" alt="Weiter zu (unsicher)" /><br/><sub>② <b>„Weiter zu … (unsicher)“</b> tippen</sub></td>
+   </tr>
+   </table>
+   <sub>Echte Chrome-Warnseite im Handyformat; auf dem Handy steht statt „localhost“ die Adresse deines PCs.</sub>
 6. **„▶ Training starten“** tippen und den **Kamerazugriff erlauben**.
 7. **Optional als App auf den Startbildschirm** (die App bringt Manifest und Icon mit):
    - Android/Chrome: Menü *⋮ → App installieren* bzw. *Zum Startbildschirm hinzufügen*
