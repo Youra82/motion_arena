@@ -176,7 +176,7 @@ die Browsertests.
 Wie bei einem Spiel: einmal doppelklicken, alles andere passiert von selbst. **Keine Administratorrechte nötig.**
 Der Start zeigt zusätzlich den QR-Code zur installierbaren App.
 
-1. **Projekt herunterladen:** auf GitHub angemeldet *Code → Download ZIP* und die ZIP-Datei entpacken
+1. **Projekt herunterladen:** auf GitHub *Code → Download ZIP* und die ZIP-Datei entpacken
    (oder `git clone https://github.com/Youra82/motion_arena.git`).
 2. Im Projektordner **`Installieren.bat`** doppelklicken. Das Skript
    - prüft, ob Node.js ≥ 22 vorhanden ist – sonst lädt es eine eigene Kopie von nodejs.org, **prüft die
@@ -248,8 +248,8 @@ installieren, dann `npm install -g pnpm`.
 
 ### 2. Projekt herunterladen und einrichten
 
-Das Repository ist **privat** – zum Klonen muss dein GitHub-Konto Zugriff haben. Am einfachsten mit der
-[GitHub CLI](https://cli.github.com/) einmalig anmelden (`gh auth login`); sonst fragt Git beim Klonen nach der Anmeldung.
+Das Repository ist öffentlich – zum Herunterladen ist keine Anmeldung nötig. Ohne Git geht es auch über
+*Code → Download ZIP* auf der GitHub-Seite.
 
 ```bash
 git clone https://github.com/Youra82/motion_arena.git
