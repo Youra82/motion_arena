@@ -1,0 +1,4 @@
+# Erster Auftrag für Claude Code oder Codex
+Du arbeitest am Projekt Motion Arena. Lies zuerst alle Markdown-Dateien im Ordner `docs/` sowie `README.md`. Diese Dokumente sind der aktuelle Produktkontext aus der Konzeption. Ältere Gold/Grün-Premium-Entwürfe sind **überholt**; gültig ist Kinetic Studio (Petrol/Graphit/Korallorange/Türkis).
+
+Prüfe zuerst das bestehende Repository. Erstelle eine kurze Bestandsaufnahme und einen Umsetzungsplan. Ändere keine anderen Bot-Projekte. Implementiere dann in einem isolierten Motion-Arena-Verzeichnis Phase 1: React/TypeScript/Vite, Kamera-Zugriff, MediaPipe-Pose, Live-Skelett, Kamera-Kalibrierung, Kniebeugen-Zustandsmaschine mit Tests, Session-State und einfache Live-UI. Verwende Platzhalter nur klar gekennzeichnet. Dokumentiere alle tatsächlich getesteten Funktionen und bekannten Grenzen. Stelle Fragen nur bei blockierenden Entscheidungen. Keine Behauptung, die Kamera könne reale Muskelkräfte messen.

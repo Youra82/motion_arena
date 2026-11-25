@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.tsbuildinfo
+types-out/
+apps/mobile-web/public/mediapipe/
+apps/mobile-web/public/models/
+
+.vite/
+tests/e2e/.results/
+playwright-report/
+
+# Rohe Codex-Sitzungsmitschnitte (enthalten lokale Pfade)
+docs/reviews/*.log

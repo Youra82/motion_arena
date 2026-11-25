@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/shared" },
+    { "path": "packages/pose-engine" },
+    { "path": "packages/motion-scoring" },
+    { "path": "apps/mobile-web" }
+  ]
+}

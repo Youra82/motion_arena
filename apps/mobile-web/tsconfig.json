@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "outDir": "../../types-out/mobile-web",
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
+  },
+  "include": ["src", "vite.config.ts"],
+  "references": [
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/pose-engine" },
+    { "path": "../../packages/motion-scoring" }
+  ]
+}
