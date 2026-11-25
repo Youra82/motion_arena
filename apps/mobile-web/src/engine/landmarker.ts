@@ -1,11 +1,14 @@
-import { FilesetResolver, PoseLandmarker, type PoseLandmarkerResult } from "@mediapipe/tasks-vision";
+import { DrawingUtils, FilesetResolver, PoseLandmarker, type MPMask, type PoseLandmarkerResult } from "@mediapipe/tasks-vision";
 import type { Landmark } from "@motion-arena/shared";
 
 export interface PoseDetection {
   landmarks: Landmark[] | null;
   worldLandmarks: Landmark[] | null;
-  /** Personenmaske (0..1 je Pixel), nur wenn angefordert. */
-  mask: { data: Float32Array; width: number; height: number } | null;
+  /**
+   * Personenmaske als fertig eingefärbtes Bild (Türkis, Deckkraft = Personenwahrscheinlichkeit),
+   * gleiche Maße wie das Kamerabild. Nur wenn angefordert.
+   */
+  mask: HTMLCanvasElement | null;
 }
 
 const base = import.meta.env.BASE_URL;
@@ -22,13 +25,21 @@ export class PoseDetector {
   private wantMask = false;
   private appliedMask = false;
   private reconfiguring = false;
-  private maskBuffer: Float32Array | null = null;
+  /** WebGL-Canvas der Erkennung (GPU): Maske wird dort ohne Zurücklesen gezeichnet. */
+  private glCanvas: HTMLCanvasElement | null = null;
+  private drawer: DrawingUtils | null = null;
+  /** 2D-Kopie der eingefärbten Maske – bleibt nach dem Callback gültig. */
+  private maskOut: HTMLCanvasElement | null = null;
+  private maskImage: ImageData | null = null;
   delegate: "GPU" | "CPU" = "GPU";
 
   async init(variant: "lite" | "full"): Promise<void> {
     const fileset = await FilesetResolver.forVisionTasks(`${base}mediapipe/wasm`);
     if (this.closed) return;
+    // Eigene Canvas für den WebGL-Kontext der GPU-Erkennung (in Tests ohne DOM weggelassen).
+    if (typeof document !== "undefined") this.glCanvas = document.createElement("canvas");
     const opts = (delegate: "GPU" | "CPU") => ({
+      ...(delegate === "GPU" && this.glCanvas ? { canvas: this.glCanvas } : {}),
       baseOptions: { modelAssetPath: `${base}models/pose_landmarker_${variant}.task`, delegate },
       runningMode: "VIDEO" as const,
       numPoses: 1,
@@ -46,6 +57,10 @@ export class PoseDetector {
       if (this.closed) return;
       lm = await PoseLandmarker.createFromOptions(fileset, opts("CPU"));
       this.delegate = "CPU";
+    }
+    if (this.delegate === "GPU" && this.glCanvas) {
+      const gl = this.glCanvas.getContext("webgl2");
+      if (gl) this.drawer = new DrawingUtils(gl);
     }
     if (this.closed) {
       lm.close();
@@ -90,15 +105,9 @@ export class PoseDetector {
     this.landmarker.detectForVideo(video, ts, (r: PoseLandmarkerResult) => {
       const lm = r.landmarks[0];
       const wl = r.worldLandmarks[0];
-      let mask: PoseDetection["mask"] = null;
       const m = r.segmentationMasks?.[0];
-      if (m) {
-        // Kopie nötig: Maskenspeicher ist nur im Callback gültig. Puffer wird wiederverwendet.
-        const src = m.getAsFloat32Array();
-        if (!this.maskBuffer || this.maskBuffer.length !== src.length) this.maskBuffer = new Float32Array(src.length);
-        this.maskBuffer.set(src);
-        mask = { data: this.maskBuffer, width: m.width, height: m.height };
-      }
+      // Maske ist nur im Callback gültig → sofort in eine eigene 2D-Canvas übertragen.
+      const mask = m ? this.renderMask(m) : null;
       out = {
         landmarks: lm ? lm.map((p) => ({ x: p.x, y: p.y, z: p.z, visibility: p.visibility ?? 0 })) : null,
         worldLandmarks: wl ? wl.map((p) => ({ x: p.x, y: p.y, z: p.z, visibility: p.visibility ?? 0 })) : null,
@@ -108,8 +117,53 @@ export class PoseDetector {
     return out;
   }
 
+  /**
+   * Färbt die Maske türkis ein (Deckkraft = Wahrscheinlichkeit) und kopiert sie in eine 2D-Canvas.
+   * GPU: direkt in WebGL zeichnen – ein Zurücklesen per getAsFloat32Array() scheitert dort
+   * (glReadPixels: "Invalid format and type combination") und ergäbe eine leere, schwarze Maske.
+   * CPU: Werte liegen im Arbeitsspeicher und werden pixelweise übertragen.
+   */
+  private renderMask(m: MPMask): HTMLCanvasElement | null {
+    if (typeof document === "undefined") return null;
+    if (!this.maskOut) this.maskOut = document.createElement("canvas");
+    const out = this.maskOut;
+    if (out.width !== m.width || out.height !== m.height) {
+      out.width = m.width;
+      out.height = m.height;
+      this.maskImage = null;
+    }
+    const ctx = out.getContext("2d");
+    if (!ctx) return null;
+
+    if (m.hasWebGLTexture() && this.drawer && this.glCanvas) {
+      const gl = this.glCanvas;
+      if (gl.width !== m.width || gl.height !== m.height) {
+        gl.width = m.width;
+        gl.height = m.height;
+      }
+      this.drawer.drawConfidenceMask(m, [0, 0, 0, 0], [0x47, 0xd4, 0xd0, 230]);
+      ctx.clearRect(0, 0, out.width, out.height);
+      ctx.drawImage(gl, 0, 0); // im selben Takt kopieren, solange der WebGL-Puffer gültig ist
+      return out;
+    }
+
+    const data = m.getAsFloat32Array();
+    if (!this.maskImage) this.maskImage = new ImageData(m.width, m.height);
+    const px = this.maskImage.data;
+    for (let i = 0, j = 0; i < data.length; i++, j += 4) {
+      px[j] = 0x47;
+      px[j + 1] = 0xd4;
+      px[j + 2] = 0xd0;
+      px[j + 3] = Math.round(Math.min(1, Math.max(0, data[i]!)) * 230);
+    }
+    ctx.putImageData(this.maskImage, 0, 0);
+    return out;
+  }
+
   close(): void {
     this.closed = true;
+    this.drawer?.close();
+    this.drawer = null;
     this.landmarker?.close();
     this.landmarker = null;
   }

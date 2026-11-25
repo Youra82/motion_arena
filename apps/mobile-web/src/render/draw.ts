@@ -57,14 +57,13 @@ export interface DrawInput {
   mode: ViewMode;
   video: HTMLVideoElement | null;
   landmarks: Landmark[] | null;
-  mask: { data: Float32Array; width: number; height: number } | null;
+  /** Eingefärbte Personenmaske (Türkis, transparent außerhalb der Person) oder null. */
+  mask: HTMLCanvasElement | null;
   trail: Landmark[][];
   ring: RingState;
 }
 
 const VIS = 0.5;
-let maskCanvas: HTMLCanvasElement | null = null;
-let maskImage: ImageData | null = null;
 
 function drawBackdrop(ctx: CanvasRenderingContext2D, v: Viewport): void {
   const g = ctx.createRadialGradient(v.cw / 2, v.ch * 0.45, 0, v.cw / 2, v.ch * 0.45, Math.max(v.cw, v.ch) * 0.75);
@@ -82,27 +81,13 @@ function drawVideo(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, v: Vi
   ctx.restore();
 }
 
-function drawMask(ctx: CanvasRenderingContext2D, mask: NonNullable<DrawInput["mask"]>, v: Viewport, f: Fit): void {
-  if (!maskCanvas) maskCanvas = document.createElement("canvas");
-  if (maskCanvas.width !== mask.width || maskCanvas.height !== mask.height || !maskImage) {
-    maskCanvas.width = mask.width;
-    maskCanvas.height = mask.height;
-    maskImage = new ImageData(mask.width, mask.height);
-  }
-  const px = maskImage.data;
-  // Türkis (#47D4D0), Deckkraft = Personenwahrscheinlichkeit.
-  for (let i = 0, j = 0; i < mask.data.length; i++, j += 4) {
-    px[j] = 0x47;
-    px[j + 1] = 0xd4;
-    px[j + 2] = 0xd0;
-    px[j + 3] = Math.round(Math.min(1, Math.max(0, mask.data[i]!)) * 230);
-  }
-  maskCanvas.getContext("2d")!.putImageData(maskImage, 0, 0);
+/** Zeichnet die fertig eingefärbte Personenmaske (vom Detektor) passend zum Kamerabild. */
+function drawMask(ctx: CanvasRenderingContext2D, mask: HTMLCanvasElement, v: Viewport, f: Fit): void {
   ctx.save();
   if (v.mirror) ctx.setTransform(-1, 0, 0, 1, v.cw, 0);
   ctx.shadowColor = COLORS.motion;
   ctx.shadowBlur = 18;
-  ctx.drawImage(maskCanvas, f.ox, f.oy, f.dw, f.dh);
+  ctx.drawImage(mask, f.ox, f.oy, f.dw, f.dh);
   ctx.restore();
 }
 

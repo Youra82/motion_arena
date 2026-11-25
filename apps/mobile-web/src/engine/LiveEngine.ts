@@ -39,7 +39,7 @@ export class LiveEngine {
   private trail: Landmark[][] = [];
   private lastTrail = 0;
   private fpsFrames: number[] = [];
-  private mask: { data: Float32Array; width: number; height: number } | null = null;
+  private mask: HTMLCanvasElement | null = null;
   readonly recorder = new Recorder();
   private unsubscribe: (() => void) | null = null;
   private lastVideoTime = -1;

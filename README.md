@@ -204,7 +204,9 @@ Schritte ab:
 
 1. **Node.js prüfen** – fehlt es, wird eine eigene Kopie von nodejs.org geladen, die **SHA-256-Prüfsumme** kontrolliert
    und nur für Motion Arena unter `%LOCALAPPDATA%\MotionArena\tools` abgelegt (keine Systemänderung).
-2. **pnpm einrichten**, 3. **Abhängigkeiten installieren**, 4. **App bauen** und Erkennungsmodelle laden.
+2. **pnpm einrichten.**
+3. **Abhängigkeiten installieren** (beim ersten Mal 1–3 Minuten).
+4. **App bauen** und Erkennungsmodelle laden.
 5. **Firewall-Frage:** `J` + Enter richtet die Freigabe fürs Handy im Heimnetz ein (Windows fragt dann einmal nach
    Administratorrechten), `n` überspringt sie. Wer nur den QR-Code zur installierbaren App nutzt, braucht sie nicht.
 6. **Desktop-Verknüpfung „Motion Arena“** anlegen.

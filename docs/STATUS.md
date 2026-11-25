@@ -24,7 +24,7 @@ Stand: 25.11.2026. Gebaut von Claude Code, geprüft in zwei Runden von Codex (`d
 | Kamerazugriff verweigert → Fehlerzustand mit Ausweg (Erneut / Demo / Zurück) | Playwright | grün |
 | Typprüfung strikt, Produktions-Build | `tsc -b`, `vite build` | grün |
 
-Gesamt: **93 Vitest-Tests grün** (eigene Tests + Codex-Tests aus `test/codex/` und `LiveEngine-r2.test.ts`), 1 Aufnahme-Suite wartet auf echte Daten; **9 Playwright-Tests grün**.
+Gesamt: **93 Vitest-Tests grün** (eigene Tests + Codex-Tests aus `test/codex/` und `LiveEngine-r2.test.ts`), 1 Aufnahme-Suite wartet auf echte Daten; **10 Playwright-Tests grün**.
 
 ## Noch NICHT getestet (vor Freigabe nötig)
 
@@ -32,7 +32,7 @@ Gesamt: **93 Vitest-Tests grün** (eigene Tests + Codex-Tests aus `test/codex/` 
   „echte Geräte manuell geprüft“ – offen. Vorgehen: siehe unten „Echte Aufnahmen als Testfälle“.
 - Leistung auf Handys (fps, Wärme, Akku), iOS Safari, Android Chrome, Lichtverhältnisse, Kleidung, Hintergrund.
 - Installation auf einem echten Handy (Android-Installationsdialog, iPhone „Zum Home-Bildschirm“) und Offline-Betrieb dort.
-- Silhouette (Personenmaske) nur kompiliert und im Code geprüft, nicht mit echter Person gesehen.
+- Silhouette: mit einem Personen-Testbild als Kamera geprüft (GPU-Maske, Browsertest `silhouette.spec.ts`); mit echter Person vor echter Handykamera noch offen. Behoben am 25.11.: auf der GPU lieferte das Zurücklesen der Maske nur Nullen → Ansicht blieb schwarz.
 - Schwellenwerte (Zähltiefe ≈ Kniewinkel 125–130°, „gut“ ≈ Oberschenkel waagerecht) sind Annahmen, nicht an echten
   Menschen kalibriert.
 
