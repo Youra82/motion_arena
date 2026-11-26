@@ -31,5 +31,5 @@ export const isViewMode = (v: string): v is ViewMode => VIEW_MODES.some((m) => m
 
 export function hasLiveStage(mode: ViewMode, avatar: string): boolean {
   return mode === "arena" || mode === "muskel" || mode === "zonen" || mode === "gitter" || mode === "skelett" ||
-    mode === "hologramm" || mode === "spur" || (mode === "avatar" && avatar === "lukas");
+    mode === "hologramm" || mode === "spur" || (mode === "avatar" && avatar !== "");
 }

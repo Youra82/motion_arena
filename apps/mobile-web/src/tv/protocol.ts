@@ -35,6 +35,7 @@ export interface TvState {
   /** Trainingsraum und Avatar des Handys (für die Darstellung ohne Video). */
   room?: string;
   avatar?: string;
+  trainer?: string;
 }
 
 export type PhoneMessage =
@@ -227,7 +228,8 @@ export function isTvState(v: unknown): v is TvState {
     isSummary(v.summary) &&
     (v.arenaRoom === undefined || isArenaRoom(v.arenaRoom)) &&
     (v.room === undefined || str(v.room, 40)) &&
-    (v.avatar === undefined || str(v.avatar, 40))
+    (v.avatar === undefined || str(v.avatar, 40)) &&
+    (v.trainer === undefined || str(v.trainer, 40))
   );
 }
 

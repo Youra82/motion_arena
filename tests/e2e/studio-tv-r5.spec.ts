@@ -1,4 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { openTvPanel } from "./stage-colors";
+import { stageColors } from "./stage-colors";
 
 test.use({ deviceScaleFactor: 3, serviceWorkers: "block" });
 
@@ -114,6 +116,7 @@ test("Kurzcode braucht Bestätigung, Ablehnen gibt den TV für einen neuen Anlau
   await openTv(tv);
   const code = await tv.locator(".tv-code").innerText();
   const submit = async () => {
+    await openTvPanel(page);
     await page.getByRole("textbox", { name: "Code vom Fernseher" }).fill(code);
     await page.getByRole("button", { name: "Verbinden" }).click();
     await expect(page.getByText(/Bitte am Fernseher auf/)).toBeVisible();
@@ -134,20 +137,6 @@ test("Kurzcode braucht Bestätigung, Ablehnen gibt den TV für einen neuen Anlau
   await expect(tv.getByRole("main", { name: "Fernseher – Anzeige des Handys" })).toBeFocused();
 });
 
-function colors(canvas: Locator) {
-  return canvas.evaluate((c: HTMLCanvasElement) => {
-    const data = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
-    let neon = 0;
-    let lime = 0;
-    for (let i = 0; i < data.length; i += 28) {
-      const [r, g, b] = [data[i]!, data[i + 1]!, data[i + 2]!];
-      if (r > 150 && g < 90 && b > 120) neon++;
-      if (r > 120 && g > r + 22 && b < 120) lime++;
-    }
-    return [neon, lime];
-  });
-}
-
 test("Gewählter Neon-Raum und Zara sind ohne Video auf Handy und TV gerendert", async ({ context, page }) => {
   const tv = await context.newPage();
   await openTv(tv);
@@ -161,9 +150,12 @@ test("Gewählter Neon-Raum und Zara sind ohne Video auf Handy und TV gerendert",
   await page.getByRole("button", { name: /^Neon Arena,/ }).click();
   await page.getByRole("button", { name: "Demo als Avatar ansehen" }).click();
   await expect(tv.locator(".tv-stage video")).toBeHidden();
-  for (const canvas of [page.locator(".live canvas"), tv.locator(".tv-stage canvas")]) {
-    await expect(canvas).toBeVisible();
-    await expect.poll(async () => (await colors(canvas)).every((count) => count > 30)).toBe(true);
+  for (const [view, stage] of [[page, page.locator(".live")], [tv, tv.locator(".tv-stage")]] as const) {
+    await expect(stage.locator("canvas[data-arena-renderer]")).toBeVisible();
+    await expect.poll(async () => {
+      const { magenta, lime } = await stageColors(view, stage);
+      return magenta > 30 && lime > 30;
+    }, { timeout: 30_000 }).toBe(true);
   }
 });
 

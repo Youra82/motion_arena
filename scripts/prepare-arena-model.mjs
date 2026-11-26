@@ -7,7 +7,9 @@ const requireTypes = createRequire(requireApp.resolve("@types/three/package.json
 const { MeshoptEncoder, MeshoptSimplifier } = requireTypes("meshoptimizer");
 await Promise.all([MeshoptEncoder.ready, MeshoptSimplifier.ready]);
 
-const input = readFileSync(new URL("../assets-src/cc0/man-base-character-rigged.glb", import.meta.url));
+// Aufruf: node scripts/prepare-arena-model.mjs [eingabe.glb] [ausgabe.glb]  (Standard: Lukas → public/arena/trainer.glb)
+const [inArg, outArg] = process.argv.slice(2);
+const input = readFileSync(inArg ?? new URL("../assets-src/cc0/man-base-character-rigged.glb", import.meta.url));
 const jsonEnd = 20 + input.readUInt32LE(12);
 const model = JSON.parse(input.subarray(20, jsonEnd).toString("utf8"));
 const binary = input.subarray(jsonEnd + 8);
@@ -100,6 +102,6 @@ const glb = Buffer.alloc(12);
 glb.write("glTF");
 glb.writeUInt32LE(2, 4);
 glb.writeUInt32LE(28 + json.length + padding.length + total, 8);
-writeFileSync(new URL("../apps/mobile-web/public/arena/trainer.glb", import.meta.url), Buffer.concat([
+writeFileSync(outArg ?? new URL("../apps/mobile-web/public/arena/trainer.glb", import.meta.url), Buffer.concat([
   glb, header("JSON", json.length + padding.length), json, padding, header("BIN\0", total), ...chunks,
 ]));

@@ -132,9 +132,37 @@ function matte(mask: HTMLCanvasElement, video?: HTMLVideoElement): HTMLCanvasEle
 }
 
 /** Zeichnet die leuchtend grüne Personenmaske des Detektors passend zum Kamerabild. */
+/**
+ * Silhouette weich nachführen: die Maske kommt nur im Erkennungstakt (15–30/s), gezeichnet wird im Bildschirmtakt.
+ * Neue Masken werden über ~35 ms eingeblendet, die alte blendet gleichzeitig aus – keine Sprünge im Umriss.
+ */
+const fade = { canvas: null as HTMLCanvasElement | null, at: 0 };
+function blendedMask(cutout: CanvasImageSource & { width: number; height: number }, now: number): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null;
+  const acc = (fade.canvas ??= document.createElement("canvas"));
+  const first = acc.width !== cutout.width || acc.height !== cutout.height || now - fade.at > 250;
+  if (first) {
+    acc.width = cutout.width;
+    acc.height = cutout.height;
+  }
+  const g = acc.getContext("2d");
+  if (!g) return null;
+  const a = first ? 1 : 1 - Math.exp(-Math.max(0, now - fade.at) / 35);
+  fade.at = now;
+  g.save();
+  g.globalCompositeOperation = "destination-out";
+  g.globalAlpha = a;
+  g.fillRect(0, 0, acc.width, acc.height);
+  g.globalCompositeOperation = "source-over";
+  g.drawImage(cutout, 0, 0); // mit gleicher Deckkraft a: Ergebnis ≈ a·neu + (1−a)·alt
+  g.restore();
+  return acc;
+}
+
 function drawMask(ctx: CanvasRenderingContext2D, mask: HTMLCanvasElement, v: Viewport, f: Fit): void {
-  const cutout = matte(mask);
-  if (!cutout) return;
+  const matted = matte(mask);
+  if (!matted) return;
+  const cutout = blendedMask(matted, performance.now()) ?? matted;
   ctx.save();
   if (v.mirror) ctx.setTransform(-1, 0, 0, 1, v.cw, 0);
   ctx.shadowColor = "#a5ff3b";

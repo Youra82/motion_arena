@@ -4,10 +4,9 @@ import { VIEW_MODES, actions, useApp } from "../store";
 import { LiveHud, QualityChip } from "../components/LiveHud";
 import { hudViewFrom } from "../components/hud-view";
 import { TvVideoConsent } from "../components/TvLink";
+import { StagePicker } from "../components/StagePicker";
 import { usePhoneLink } from "../tv/phone-link";
 import { arenaDpr } from "../arena/arena-renderer";
-import { ARENA_ROOMS, isArenaRoom } from "../arena/rooms";
-import { ROOMS, isRoomId } from "../render/rooms";
 import { hasLiveStage } from "../view-modes";
 
 export function LiveScreen() {
@@ -30,8 +29,6 @@ export function LiveScreen() {
   const recording = useApp((s) => s.recording);
   const recordedFrames = useApp((s) => s.recordedFrames);
   const liveMode = useApp((s) => s.liveMode);
-  const arenaRoom = useApp((s) => s.settings.arenaRoom);
-  const studioRoom = useApp((s) => s.settings.room);
   const avatar = useApp((s) => s.settings.avatar);
   const arena = viewMode === "arena" && liveMode === "squat";
 
@@ -108,6 +105,8 @@ export function LiveScreen() {
         {engineStatus === "running" && <QualityChip view={view} />}
         {engineStatus === "running" && <span className="chip muted" title="Bilder pro Sekunde der Körpererkennung">{hud.fps} fps</span>}
       </div>
+
+      {hasLiveStage(viewMode, avatar) && <StagePicker />}
 
       <div className="live-consent">
         <TvVideoConsent />
@@ -195,21 +194,6 @@ export function LiveScreen() {
           })}
         </div>
         <div className="controls">
-          {hasLiveStage(viewMode, avatar) && (
-            <select
-              className="arena-room-select"
-              aria-label="Arena-Raum"
-              value={arenaRoom === "lebombo" ? arenaRoom : studioRoom}
-              onChange={(event) => {
-                const room = event.currentTarget.value;
-                if (isRoomId(room)) actions.updateSettings({ room, arenaRoom: "loft" });
-                else if (isArenaRoom(room)) actions.updateSettings({ arenaRoom: room });
-              }}
-            >
-              {ROOMS.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
-              {ARENA_ROOMS.filter(({ id }) => id !== "loft").map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
-            </select>
-          )}
           {stage === "training" && running && (
             <button className="btn" onClick={() => actions.pause(now())}>
               ❚❚ Pause

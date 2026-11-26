@@ -1,6 +1,31 @@
 import { Color, FrontSide, MeshPhysicalMaterial, type MeshStandardMaterial } from "three";
 
-export function makeTrainerMaterial(source: MeshStandardMaterial): MeshPhysicalMaterial {
+/** Aussehen einer Figur auf dem Lukas-Körper (Konzeptfarben). Ohne Angabe: Lukas' Originalwerte. */
+export interface TrainerLook {
+  shirt: string;
+  shorts: string;
+  accent: string;
+  /** Hautton der Figur – wird ins Verhältnis zu Lukas' Haut gesetzt (Textur bleibt, Farbe verschiebt sich). */
+  skin: string;
+  hair: string;
+}
+
+const LUKAS_SKIN = "#d9a888";
+const glsl = (c: Color) => `vec3(${c.r.toFixed(4)},${c.g.toFixed(4)},${c.b.toFixed(4)})`;
+/** sRGB-Hex → lineare Farbe, mit Faktor (Stoffwerte im Shader sind lineare Albedo × Faltenhelligkeit). */
+const lin = (hex: string, k = 1) => new Color(hex).multiplyScalar(k);
+
+export function makeTrainerMaterial(source: MeshStandardMaterial, look?: TrainerLook): MeshPhysicalMaterial {
+  // Standardwerte = bisheriger Lukas-Look
+  const shirt = look ? glsl(lin(look.shirt, 0.9)) : "vec3(.021,.026,.031)";
+  const shorts = look ? glsl(lin(look.shorts, 0.75)) : "vec3(.016,.020,.024)";
+  const accent = look ? glsl(lin(look.accent, 0.6)) : "vec3(.31,.085,.021)";
+  const ref = new Color(LUKAS_SKIN);
+  const tone = look ? new Color(look.skin) : ref;
+  const skinMul = glsl(new Color(
+    0.975 * Math.min(1.6, tone.r / ref.r), 0.895 * Math.min(1.6, tone.g / ref.g), 0.822 * Math.min(1.6, tone.b / ref.b)));
+  const hairLight = look ? lin(look.hair, 0.9) : new Color(0.076, 0.033, 0.014);
+  const hairDark = hairLight.clone().multiplyScalar(0.19);
   const material = new MeshPhysicalMaterial({
     color: source.color,
     map: source.map,
@@ -20,6 +45,8 @@ export function makeTrainerMaterial(source: MeshStandardMaterial): MeshPhysicalM
     clearcoatRoughness: 0.24,
   });
   material.normalScale.setScalar(0.76);
+  // Eigener Programm-Schlüssel je Look – sonst teilt three.js den zuerst kompilierten Shader (gleicher Funktionstext)
+  material.customProgramCacheKey = () => `trainer:${shirt}${shorts}${accent}${skinMul}${glsl(hairLight)}`;
   material.onBeforeCompile = (shader) => {
     shader.vertexShader = `varying vec3 clothingPoint;\n${shader.vertexShader}`
       .replace("#include <begin_vertex>", "#include <begin_vertex>\nclothingPoint = position;");
@@ -45,12 +72,12 @@ export function makeTrainerMaterial(source: MeshStandardMaterial): MeshPhysicalM
       vec3 textileUV = clothingPoint * vec3(341.,456.,377.);
       float weaveFade = 1. - smoothstep(1.3,3.1,length(fwidth(textileUV)));
       float weave = trainerDetail(textileUV) * weaveFade;
-      vec3 fabric = vec3(.021,.026,.031) * (folds + weave * .13);
-      vec3 nylon = vec3(.016,.020,.024) * (folds + weave * .10);
+      vec3 fabric = ${shirt} * (folds + weave * .13);
+      vec3 nylon = ${shorts} * (folds + weave * .10);
       float stitch = (1. - smoothstep(.0015,.0048,abs(x - sleeveLine + .009))) * smoothstep(.219,.244,x) * smoothstep(1.255,1.28,y);
       float edge = (1. - smoothstep(.002,.005,abs(y - collarLine + .007))) * (1. - smoothstep(.102,.14,x));
       fabric = mix(fabric, vec3(.054,.058,.062), edge * .58);
-      fabric = mix(fabric, vec3(.31,.085,.021), stitch * .68);
+      fabric = mix(fabric, ${accent}, stitch * .68);
 
       // Break up the source skin's even shine with larger tonal changes and antialiased pores.
       float scalp = smoothstep(1.707,1.759,y);
@@ -67,9 +94,9 @@ export function makeTrainerMaterial(source: MeshStandardMaterial): MeshPhysicalM
       vec2 knee = (vec2(x,y) - vec2(.14,.54)) / vec2(.070,.058);
       vec2 elbow = (vec2(x,y) - vec2(.355,1.143)) / vec2(.062,.040);
       float warmth = max(exp(-dot(knee,knee)) * smoothstep(-.01,.058,clothingPoint.z), exp(-dot(elbow,elbow)) * .55);
-      vec3 skin = texel * vec3(.975,.895,.822) * (1. + mottling + fineSkin * .013 + pores * .024);
+      vec3 skin = texel * ${skinMul} * (1. + mottling + fineSkin * .013 + pores * .024);
       skin += vec3(.026,.006,.003) * blush + vec3(.016,.004,.002) * warmth;
-      vec3 hairColor = mix(vec3(.014,.007,.004), vec3(.076,.033,.014), smoothstep(.018,.24,luminance));
+      vec3 hairColor = mix(${glsl(hairDark)}, ${glsl(hairLight)}, smoothstep(.018,.24,luminance));
       skin = mix(skin,hairColor,hair);
       diffuseColor.rgb = mix(mix(skin, nylon, shorts), fabric, shirt);
       // The sneaker mesh covers the toes and sole.

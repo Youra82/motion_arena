@@ -15,39 +15,184 @@ import { studioLoft } from "./studio-loft";
 import { addTrainerContours, poseTrainerContours } from "./trainer-anatomy";
 import { JOINTS, TrainerRig } from "./trainer-rig";
 import { trainerFootwear } from "./trainer-footwear";
+import { JumpTracker } from "./jump";
 import { attachTrainerHair, trainerHair } from "./trainer-hair";
-import { makeTrainerMaterial } from "./trainer-material";
+import { makeTrainerMaterial, type TrainerLook } from "./trainer-material";
+import { avatarById } from "../render/avatars";
 import { ROOM_GROUND, ROOM_PLATFORM, backdropZoom, roomBackdrop } from "../render/concept-art";
 
 const asset = (name: string) => `${import.meta.env.BASE_URL}arena/${name}`;
 const JOINT_COLOR = new THREE.Color(0.34, 2.6, 2.34);
 
-/** Kleine Detailteile der Mehrteil-Figur (nur in der Avatar-Ansicht sichtbar). */
-const DETAIL_PART = /eye|lash|brow|hair|teeth|tongue/i;
-function isDetailPart(mesh: THREE.Mesh, sources?: THREE.SkinnedMesh[]): boolean {
-  const material = (sources?.find((part) => part.name === mesh.name) ?? mesh).material;
-  const name = Array.isArray(material) ? material[0]?.name ?? "" : material.name;
-  return DETAIL_PART.test(name) || DETAIL_PART.test(mesh.name);
+/**
+ * Avatar → realistischer CC0-Körper (Grab3D). Männer nutzen den ausstaffierten Lukas-Körper, Frauen
+ * „Woman Base Mesh“ (Sport-Top, Shorts, barfuß → Schuhe dazu) bzw. „Female Athlete“ (mit Sneakern).
+ */
+type FigureRole = "trainer" | "player";
+
+/** Konzeptfarben eines Avatars für den Lukas-Körper (Lukas selbst behält seinen Original-Look). */
+function lookOf(id: string): TrainerLook | undefined {
+  if (id === "lukas") return undefined;
+  const a = avatarById(id);
+  return { shirt: a.topColor, shorts: a.bottomColor, accent: a.accent, skin: a.skin, hair: a.hair };
+}
+const WOMAN_BASE = new Set(["elena", "mia", "aiko", "raven", "sara", "nova"]);
+const ATHLETE = new Set(["zara"]);
+type BodyKind = "lukas" | "woman" | "athlete" | "rocketbox";
+/** Microsoft-Rocketbox-Figuren (MIT-Lizenz), umgewandelt mit src/dev/rocketbox.ts. */
+const ROCKETBOX: Record<string, string> = {
+  finn: "bodies/rocketbox/sports-male-04.glb",
+  sara: "bodies/rocketbox/sports-female-02.glb",
+};
+function figureBody(id: string): { file: string; kind: BodyKind; barefoot: boolean } {
+  if (ROCKETBOX[id]) return { file: ROCKETBOX[id]!, kind: "rocketbox", barefoot: false };
+  if (WOMAN_BASE.has(id)) return { file: "bodies/woman-base-character.glb", kind: "woman", barefoot: true };
+  if (ATHLETE.has(id)) return { file: "bodies/female-athlete.glb", kind: "athlete", barefoot: false };
+  return { file: "trainer.glb", kind: "lukas", barefoot: true };
 }
 
-/** Materialien der generierten Figur ans Studiolicht anpassen (Haut weich, Stoff matt, Haare mit Alphatest). */
-function tuneFigureMaterial(material: THREE.MeshStandardMaterial): void {
-  material.envMapIntensity = 0.85;
-  if (/skin/i.test(material.name)) {
-    material.roughness = Math.max(material.roughness, 0.55);
-    material.metalness = 0;
-  } else if (/hair|lash|brow/i.test(material.name)) {
-    material.alphaTest = Math.max(material.alphaTest, 0.35);
-    material.transparent = false;
-    material.depthWrite = true;
-    material.side = THREE.DoubleSide;
-  } else if (/eye/i.test(material.name)) {
-    material.roughness = 0.15;
-  } else {
-    material.roughness = Math.max(material.roughness, 0.7);
-    material.metalness = 0;
+/** Hautton der Original-Texturen (Bezug für die Umrechnung auf den Hautton des Avatars). */
+const BODY_SKIN: Record<"woman" | "athlete", string> = { woman: "#e2b49a", athlete: "#7a4b36" };
+const vec = (c: THREE.Color) => `vec3(${c.r.toFixed(4)},${c.g.toFixed(4)},${c.b.toFixed(4)})`;
+
+/**
+ * Oberschenkel des Woman-Base-Scans verschlanken (der Fotoscan hat sehr breite Oberschenkel und Hüften):
+ * jeder Hautpunkt rückt im Verhältnis seines Oberschenkel-Gewichts zur Knochenachse – stärkste Wirkung in der
+ * Schenkelmitte, zu Hüfte und Knie weich auslaufend, damit keine Kanten entstehen. Bindepose, vor dem Rig.
+ */
+export function slimThighs(mesh: THREE.SkinnedMesh, amount: number): void {
+  const geometry = mesh.geometry;
+  if (geometry.userData.slim) return;
+  geometry.userData.slim = true;
+  mesh.updateWorldMatrix(true, false);
+  const bones = mesh.skeleton.bones;
+  const legs = (["Left", "Right"] as const).map((side) => {
+    const upper = bones.findIndex((b) => b.name === `${side}UpLeg`);
+    const knee = bones.find((b) => b.name === `${side}Leg`);
+    if (upper < 0 || !knee) return null;
+    const a = mesh.worldToLocal(bones[upper]!.getWorldPosition(new THREE.Vector3()));
+    const b = mesh.worldToLocal(knee.getWorldPosition(new THREE.Vector3()));
+    return { upper, a, axis: b.clone().sub(a) };
+  });
+  const position = geometry.getAttribute("position");
+  const index = geometry.getAttribute("skinIndex");
+  const weight = geometry.getAttribute("skinWeight");
+  const v = new THREE.Vector3();
+  const closest = new THREE.Vector3();
+  for (let i = 0; i < position.count; i++) {
+    for (const leg of legs) {
+      if (!leg) continue;
+      let w = 0;
+      for (let k = 0; k < 4; k++) if (index.getComponent(i, k) === leg.upper) w += weight.getComponent(i, k);
+      if (w < 0.05) continue;
+      v.fromBufferAttribute(position, i);
+      const t = THREE.MathUtils.clamp(v.clone().sub(leg.a).dot(leg.axis) / leg.axis.lengthSq(), 0, 1);
+      closest.copy(leg.a).addScaledVector(leg.axis, t);
+      // Mitte des Schenkels am stärksten, Hüfte (t=0) und Knie (t=1) unverändert
+      const taper = Math.sin(Math.PI * THREE.MathUtils.clamp(t * 1.1, 0, 1)) ** 0.7;
+      const scale = 1 - amount * w * taper;
+      // nur quer zur Achse verschlanken (Länge des Beins bleibt)
+      v.sub(closest).multiplyScalar(scale).add(closest);
+      position.setXYZ(i, v.x, v.y, v.z);
+    }
   }
-  material.needsUpdate = true;
+  const data = (position as THREE.InterleavedBufferAttribute).data;
+  if (data) data.needsUpdate = true;
+  else position.needsUpdate = true;
+  geometry.computeBoundingSphere();
+}
+
+let maskTexture: THREE.Texture | null = null;
+/** Bereichsmaske des Woman-Base-Atlas (einmal laden, von allen Frauenfiguren geteilt; glTF-UV ohne Spiegelung). */
+function womanMask(): THREE.Texture {
+  if (!maskTexture) {
+    maskTexture = new THREE.TextureLoader().load(asset("bodies/woman-base-mask.png"));
+    maskTexture.flipY = false;
+    maskTexture.anisotropy = 8;
+    maskTexture.colorSpace = THREE.NoColorSpace;
+  }
+  return maskTexture;
+}
+
+/**
+ * Konzeptfarben auf einen Frauenkörper legen. Bereiche:
+ * Woman Base – aus der vorab berechneten Maske (Top, Shorts, Haar, Rest Haut);
+ * Female Athlete – korallfarbenes Top/Streifen (stark gesättigt), dunkle Haut. Schatten/Falten bleiben erhalten.
+ */
+function applyWomanLook(m: THREE.MeshPhysicalMaterial, kind: "woman" | "athlete", id: string): void {
+  const a = avatarById(id);
+  const ref = new THREE.Color(BODY_SKIN[kind]);
+  const tone = new THREE.Color(a.skin);
+  const skinMul = new THREE.Color(Math.min(1.7, tone.r / ref.r), Math.min(1.7, tone.g / ref.g), Math.min(1.7, tone.b / ref.b));
+  const top = new THREE.Color(a.topColor);
+  const bottom = new THREE.Color(a.bottomColor);
+  const hair = new THREE.Color(a.hair);
+  // Woman Base: vorab berechnete Bereichsmaske (scripts/woman-look-mask.py) – R Top, G Shorts, B Haar.
+  // Farbschwellen allein ordnen die Schnipselkanten des Fotoscan-Atlas falsch zu (Saum, Sprenkel).
+  // Helligkeit relativ zum Mittel der Klasse (linear: Top .24, Shorts .033, Haar .022) erhält Falten und Schatten;
+  // nach oben eng begrenzt – an Schnipselnähten eingemischte Haut-Texel würden sonst als helle Adern aufleuchten.
+  const classify = kind === "woman"
+    ? `vec3 mk = smoothstep(vec3(.22), vec3(.62), texture2D(lookMask, vMapUv).rgb); // Kanten nicht halb Haut/halb Stoff
+       float isSkin = clamp(1. - mk.r - mk.g - mk.b, 0., 1.);
+       lookFabric = mk.r + mk.g;
+       vec3 recol = ${vec(top)} * clamp(lum / .24, .35, 1.12) * mk.r
+                  + ${vec(bottom)} * clamp(lum / .033, .35, 1.12) * mk.g
+                  + ${vec(hair)} * clamp(lum / .022, .3, 2.2) * mk.b
+                  + c * ${vec(skinMul)} * isSkin;`
+    : `float isTop = step(.16, lum) * step(.6, sat) * step(4. * c.g, c.r);
+       vec3 recol = mix(c * ${vec(skinMul)}, ${vec(top)} * clamp(lum / .33, .3, 1.6), isTop);
+       lookFabric = isTop + step(lum, .06) * step(sat, .3);`;
+  m.customProgramCacheKey = () => `woman:${kind}:${id}`;
+  m.onBeforeCompile = (shader) => {
+    if (kind === "woman") {
+      shader.uniforms.lookMask = { value: womanMask() };
+      shader.fragmentShader = `uniform sampler2D lookMask;
+${shader.fragmentShader}`;
+    }
+    // Samtglanz (sheen) nur auf Stoff: auf Haut und Augen wirkt der kühle Glanz wie ein grauer Schleier
+    shader.fragmentShader = shader.fragmentShader.replace("#include <lights_physical_fragment>", `#include <lights_physical_fragment>
+      #ifdef USE_SHEEN
+        material.sheenColor *= lookFabric;
+      #endif`);
+    shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
+      float lookFabric = 0.;
+      {
+        vec3 c = diffuseColor.rgb;
+        float mx = max(max(c.r, c.g), c.b);
+        float mn = min(min(c.r, c.g), c.b);
+        float sat = mx > .0001 ? (mx - mn) / mx : 0.;
+        float lum = dot(c, vec3(.2126, .7152, .0722));
+        ${classify}
+        diffuseColor.rgb = recol;
+      }`);
+  };
+}
+
+/** Natürliches Material für Grab3D-Körper: Textur bleibt, Haut weich, Stoff matt, leichter Glanz wie bei Lukas. */
+/** Rocketbox: Haut und Stoff aus den Original-Karten (Farbe, Normalen, Rauheit aus der Glanzkarte); Haare per Alpha-Test. */
+function makeRocketboxMaterial(source: THREE.MeshStandardMaterial): THREE.MeshPhysicalMaterial {
+  const m = new THREE.MeshPhysicalMaterial({
+    name: source.name, map: source.map, normalMap: source.normalMap, roughnessMap: source.roughnessMap,
+    roughness: source.roughnessMap ? 1 : 0.75, metalness: 0, specularIntensity: 0.55,
+    alphaTest: source.alphaTest, side: source.alphaTest > 0 ? THREE.DoubleSide : THREE.FrontSide,
+  });
+  m.normalScale.setScalar(0.9);
+  m.envMapIntensity = 1.0;
+  for (const t of [m.map, m.normalMap, m.roughnessMap]) if (t) t.anisotropy = 8;
+  return m;
+}
+
+function makeNaturalMaterial(source: THREE.MeshStandardMaterial): THREE.MeshPhysicalMaterial {
+  const m = new THREE.MeshPhysicalMaterial({
+    map: source.map, normalMap: source.normalMap, roughnessMap: source.roughnessMap, aoMap: source.aoMap,
+    color: source.color, roughness: 0.72, metalness: 0, specularIntensity: 0.8, sheen: 0.6,
+    sheenColor: new THREE.Color("#a1aeb7"), sheenRoughness: 0.55, clearcoat: 0.12, clearcoatRoughness: 0.4,
+  });
+  m.normalScale.setScalar(0.8);
+  m.envMapIntensity = 1.05;
+  // Fotoscan-Atlas: schräg gesehene Flächen scharf abtasten, sonst mischen sich Nachbarschnipsel an den Nähten ein
+  for (const t of [m.map, m.normalMap, m.roughnessMap]) if (t) t.anisotropy = 8;
+  return m;
 }
 
 function hologram(opacity: number, acid = false): THREE.MeshStandardMaterial {
@@ -162,11 +307,15 @@ export class ArenaThree {
   private playerMesh: THREE.SkinnedMesh | null = null;
   private trainerMesh: THREE.SkinnedMesh | null = null;
   private playerHologram: THREE.Material | null = null;
-  private playerKit: THREE.Material | null = null;
+  /** Teile der Spielerfigur mit ihrem Avatar- und Hologramm-Material (je Ansicht umgeschaltet). */
+  private playerParts: Array<{ mesh: THREE.SkinnedMesh; kit: THREE.Material | THREE.Material[]; hologram: THREE.Material }> = [];
   private playerHair: THREE.Mesh | null = null;
   private playerShoes: THREE.Group[] = [];
-  /** Mehrteil-Figur (Ara/MakeHuman): Spieler-Teile mit ihrem eigenen Material für die Avatar-Ansicht. */
-  private playerParts: Array<{ mesh: THREE.SkinnedMesh; kit: THREE.Material; detail: boolean }> = [];
+  private readonly figureId: Record<FigureRole, string | null> = { trainer: null, player: null };
+  /** Sprunghöhe aus dem Kamerabild (Füße über ihrem Bodenstand). */
+  private readonly jump = new JumpTracker();
+  private readonly figureLoading: Record<FigureRole, string | null> = { trainer: null, player: null };
+  private readonly figureFailed = new Set<string>();
   private ghosts: TrainerRig[] = [];
   private trail: Array<{ at: number; flex: number; joints: Landmark[] | null; metric: boolean }> = [];
   private nextTrailAt = 0;
@@ -190,80 +339,135 @@ export class ArenaThree {
     this.dots = new THREE.InstancedMesh(new THREE.SphereGeometry(0.018, 8, 6), new THREE.MeshBasicMaterial({ color: JOINT_COLOR, toneMapped: false }), JOINTS.length);
     this.dots.frustumCulled = false;
     this.scene.add(this.dots);
+    this.loadFigure("trainer", "lukas");
+    this.loadFigure("player", "lukas");
+  }
+
+  /**
+   * Figur für eine Rolle laden: „trainer“ (macht vor) oder „player“ (du – folgt deiner Bewegung). Beide Rollen
+   * haben eigene Figuren; ein Wechsel tauscht nur die betroffene Rolle aus, die andere bleibt sichtbar.
+   */
+  private loadFigure(role: FigureRole, id: string): void {
     const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).register((parser) => {
       // Embedded textures are local blob images. Use the image policy instead of a fetch.
       parser.textureLoader = new THREE.TextureLoader(loader.manager);
       return { name: "MotionArenaImageLoader" };
     });
-    void fetch(asset("trainer.glb"), { signal: this.abort.signal }).then((response) => {
-      if (!response.ok) throw new Error(`Trainer konnte nicht geladen werden (${response.status})`);
+    const body = figureBody(id);
+    this.figureLoading[role] = id;
+    void fetch(asset(body.file), { signal: this.abort.signal }).then((response) => {
+      if (!response.ok) throw new Error(`Figur konnte nicht geladen werden (${response.status})`);
       return response.arrayBuffer();
     }).then((bytes) => loader.parseAsync(bytes, asset(""))).then(({ scene }) => {
-      if (this.abort.signal.aborted) {
+      if (this.abort.signal.aborted || this.figureLoading[role] !== id) {
         this.disposeObjects(scene);
         return;
       }
-      this.trainer = new TrainerRig(scene);
-      this.trainer.root.rotation.y = 0.42;
-      const parts: THREE.SkinnedMesh[] = [];
-      scene.traverse((node) => { if (node instanceof THREE.SkinnedMesh) parts.push(node); });
-      if (parts.length > 1) {
-        // Figur aus dem Menschengenerator: Haut, Augen, Haare, Kleidung und Schuhe sind eigene Teile mit
-        // eigenem Material – keine nachträglichen Haare/Schuhe/Konturen nötig.
-        parts.forEach((part) => {
-          part.frustumCulled = false;
-          tuneFigureMaterial(part.material as THREE.MeshStandardMaterial);
-        });
-        this.player = this.makeHologram(scene, 0.92);
-        this.player.root.traverse((node) => {
-          if (node instanceof THREE.SkinnedMesh) {
-            const source = parts.find((part) => part.name === node.name) ?? parts[0]!;
-            this.playerParts.push({ mesh: node, kit: source.material as THREE.Material, detail: isDetailPart(source) });
-            this.playerHologram = node.material as THREE.Material;
+      this.figureLoading[role] = null;
+      this.figureId[role] = id;
+      let mesh: THREE.SkinnedMesh | null = null;
+      let kit: THREE.MeshStandardMaterial | null = null;
+      /** Material je Teil-Mesh in Durchlaufreihenfolge (Rocketbox besteht aus mehreren Teilen: Körper, Kopf, Haare). */
+      const kits: Array<THREE.Material | THREE.Material[]> = [];
+      scene.traverse((node) => {
+        if (node instanceof THREE.SkinnedMesh && (body.kind === "rocketbox" || !mesh)) {
+          node.frustumCulled = false;
+          if (body.kind === "woman") slimThighs(node, 0.15);
+          if (body.kind === "rocketbox") {
+            // mehrere Materialien (Körper, Kopf, ggf. Haare) – jedes mit seinen Original-Karten
+            const sources = (Array.isArray(node.material) ? node.material : [node.material]) as THREE.MeshStandardMaterial[];
+            const list = sources.map(makeRocketboxMaterial);
+            node.material = list.length === 1 ? list[0]! : list;
+            kit ??= list[0]!;
+            kits.push(node.material);
+            sources.forEach((x) => x.dispose());
+            mesh ??= node;
+            return;
           }
-        });
+          const source = node.material as THREE.MeshStandardMaterial;
+          if (body.kind === "lukas") kit = makeTrainerMaterial(source, lookOf(id));
+          else {
+            const natural = makeNaturalMaterial(source as THREE.MeshStandardMaterial);
+            applyWomanLook(natural, body.kind as "woman" | "athlete", id);
+            kit = natural;
+          }
+          node.material = kit;
+          kits.push(kit);
+          source.dispose();
+          if (body.kind === "lukas") addTrainerContours(node);
+          mesh = node;
+        }
+      });
+      const m = mesh as THREE.SkinnedMesh | null;
+      const k = kit as THREE.MeshStandardMaterial | null;
+      if (role === "trainer") {
+        this.dropRole("trainer");
+        const rig = new TrainerRig(scene);
+        rig.root.rotation.y = 0.42;
+        if (body.kind === "lukas" && m && k?.map) {
+          const hair = trainerHair(m, k.map);
+          if (hair) attachTrainerHair(rig.root, hair);
+        }
+        if (body.barefoot) trainerFootwear(rig.root, body.kind !== "lukas");
+        this.trainer = rig;
+        this.trainerMesh = m;
+        this.scene.add(rig.root);
+      } else {
+        this.dropRole("player");
+        // Spieler: Klon mit Hologramm-Material; das eigene Material (Avatar-Look) wird je Ansicht eingesetzt
+        this.player = this.makeHologram(scene, 0.92);
+        // Teile des Klons in derselben Reihenfolge wie im Original: jedem Teil sein eigenes Avatar-Material
+        const parts: THREE.SkinnedMesh[] = [];
+        this.player.root.traverse((node) => { if (node instanceof THREE.SkinnedMesh) parts.push(node); });
+        this.playerParts = parts.map((part, i) => ({ mesh: part, kit: kits[i] ?? kits[0]!, hologram: part.material as THREE.Material }));
+        this.playerMesh = parts[0] ?? null;
+        this.playerHologram = this.playerParts[0]?.hologram ?? null;
+        if (this.playerMesh) this.analysisMaterial.bind(this.playerMesh);
         this.ghosts = [this.makeHologram(scene, 0.29), this.makeHologram(scene, 0.17), this.makeHologram(scene, 0.10)];
-        for (const ghost of this.ghosts) ghost.root.traverse((node) => { if (node instanceof THREE.SkinnedMesh && isDetailPart(node, parts)) node.visible = false; });
-        this.scene.add(this.trainer.root);
-        this.status = "ready";
+        if (body.kind === "lukas" && m && k?.map) {
+          const hair = trainerHair(m, k.map);
+          if (hair) {
+            this.playerHair = hair;
+            attachTrainerHair(this.player.root, hair);
+          }
+        }
+        if (body.barefoot) this.playerShoes = trainerFootwear(this.player.root, body.kind !== "lukas");
+      }
+      if (this.trainer && this.player) this.status = "ready";
+    }).catch((error: unknown) => {
+      if (this.abort.signal.aborted) return;
+      this.figureLoading[role] = null;
+      if (role === "trainer" ? this.trainer : this.player) {
+        console.warn(`Arena: Avatar ${id} (${role}) nicht ladbar – bisherige Figur bleibt`, error);
+        this.figureFailed.add(`${role}:${id}`);
         return;
       }
-      scene.traverse((node) => {
-        if (node instanceof THREE.SkinnedMesh) {
-          node.frustumCulled = false;
-          const source = node.material as THREE.MeshStandardMaterial;
-          const m = makeTrainerMaterial(source);
-          node.material = m;
-          source.dispose();
-          addTrainerContours(node);
-          this.trainerMesh = node;
-          this.playerKit = m;
-        }
-      });
-      this.player = this.makeHologram(scene, 0.92);
-      this.player.root.traverse((node) => {
-        if (node instanceof THREE.SkinnedMesh && !Array.isArray(node.material)) {
-          this.playerMesh = node;
-          this.playerHologram = node.material;
-        }
-      });
-      this.ghosts = [this.makeHologram(scene, 0.29), this.makeHologram(scene, 0.17), this.makeHologram(scene, 0.10)];
-      if (this.trainerMesh && this.playerKit instanceof THREE.MeshStandardMaterial && this.playerKit.map) {
-        const hair = trainerHair(this.trainerMesh, this.playerKit.map);
-        if (hair) {
-          this.playerHair = hair.clone();
-          attachTrainerHair(this.trainer.root, hair);
-          attachTrainerHair(this.player.root, this.playerHair);
-        }
-      }
-      trainerFootwear(this.trainer.root);
-      this.playerShoes = trainerFootwear(this.player.root);
-      this.scene.add(this.trainer.root);
-      this.status = "ready";
-    }).catch((error: unknown) => {
-      if (!this.abort.signal.aborted) console.warn("Arena: Trainer nicht ladbar – 2D-Ersatzszene", error);
+      console.warn("Arena: Figur nicht ladbar – 2D-Ersatzszene", error);
       this.status = "unavailable";
     });
+  }
+
+  /** Figur einer Rolle aus der Szene nehmen und Speicher freigeben. */
+  private dropRole(role: FigureRole): void {
+    const roots = role === "trainer"
+      ? [this.trainer?.root]
+      : [this.player?.root, ...this.ghosts.map((g) => g.root)];
+    for (const root of roots) {
+      if (!root) continue;
+      this.scene.remove(root);
+      this.disposeObjects(root);
+    }
+    if (role === "trainer") {
+      this.trainer = null;
+      this.trainerMesh = null;
+    } else {
+      this.player = null;
+      this.ghosts = [];
+      this.playerMesh = null;
+      this.playerParts = [];
+      this.playerHair = null;
+      this.playerShoes = [];
+    }
   }
 
   private makeHologram(source: THREE.Group, opacity: number): TrainerRig {
@@ -283,6 +487,10 @@ export class ArenaThree {
     return rig;
   }
 
+  /**
+   * Sprunghöhe in Metern aus den 2D-Körperpunkten: Abstand der Füße zu ihrem Bodenstand, umgerechnet über die
+   * Beinlänge im Bild (≈ 0,9 m). Der Bodenstand folgt Stand und Kamera langsam, Absprünge sofort sichtbar.
+   */
   /** Bodenpunkt (y = 0) unter einem Bildpunkt; null, wenn der Sichtstrahl den Boden nicht trifft. */
   private onFloor(x: number, y: number): THREE.Vector3 | null {
     const ray = this.screen.set(x * 2 - 1, 1 - 2 * y, 0).unproject(this.camera).sub(this.camera.position);
@@ -362,6 +570,12 @@ export class ArenaThree {
   }
 
   draw(ctx: CanvasRenderingContext2D, frame: ArenaFrame): boolean {
+    for (const [role, id] of [["trainer", frame.trainer], ["player", frame.avatar]] as const) {
+      const wanted = id && /^[a-z]+$/.test(id) ? id : "lukas";
+      if (wanted !== this.figureId[role] && wanted !== this.figureLoading[role] && !this.figureFailed.has(`${role}:${wanted}`)) {
+        this.loadFigure(role, wanted);
+      }
+    }
     if (this.status !== "ready" || !this.trainer || !this.player) return false;
     const { cw: w, ch: h } = frame.v;
     const compact = w < h * 1.1;
@@ -420,28 +634,26 @@ export class ArenaThree {
       poseTrainerContours(this.trainerMesh, guideFlex, true);
     }
     const analytic = frame.mode === "muskel" || frame.mode === "zonen" || frame.mode === "gitter";
+    // Du erscheinst als dein gewählter Avatar – in der Arena (neben dem Trainer) und in der Ansicht „Avatar“
+    const kitShown = frame.mode === "avatar" || !frame.mode || frame.mode === "arena";
     if (analytic) this.analysisMaterial.update(frame);
-    if (this.playerMesh && this.playerHologram && this.playerKit) {
-      this.playerMesh.material = analytic ? this.analysisMaterial : frame.mode === "avatar" ? this.playerKit : frame.mode === "skelett" ? this.green : this.playerHologram;
+    for (const part of this.playerParts) {
+      part.mesh.material = analytic ? this.analysisMaterial : kitShown ? part.kit : frame.mode === "skelett" ? this.green : part.hologram;
     }
-    if (this.playerParts.length && this.playerHologram) {
-      const avatar = frame.mode === "avatar";
-      for (const part of this.playerParts) {
-        part.mesh.material = analytic ? this.analysisMaterial : avatar ? part.kit : frame.mode === "skelett" ? this.green : this.playerHologram;
-        // Augen, Wimpern, Brauen, Haare nur in der Avatar-Ansicht – im Hologramm/Analysebild stören sie
-        part.mesh.visible = avatar || !part.detail;
-      }
-    }
-    this.playerShoes.forEach((shoe) => { shoe.visible = soloAvatar; });
-    if (this.playerHair) this.playerHair.visible = soloAvatar;
-    poseTrainerContours(this.playerMesh, flex ?? 0, soloAvatar || frame.mode === "muskel");
+    this.playerShoes.forEach((shoe) => { shoe.visible = kitShown; });
+    if (this.playerHair) this.playerHair.visible = kitShown;
+    poseTrainerContours(this.playerMesh, flex ?? 0, kitShown || frame.mode === "muskel");
     const joints = frame.worldPose ?? frame.pose;
     const aspect = frame.v.sw / frame.v.sh;
     const sourcePose = (solo && !guidedAvatar) || (!frame.demo && !filmed);
     if (sourcePose) this.player.root.rotation.y = 0;
-    const follows = sourcePose && !!joints && this.player.follow(joints, aspect, !!frame.worldPose, frame.demo);
+    const follows = sourcePose && !!joints && this.player.follow(joints, aspect, !!frame.worldPose, frame.demo, frame.v.mirror);
+    // Sprünge: Weltkoordinaten sind hüftzentriert – die Sprunghöhe kommt aus dem Bild (Füße über ihrem Bodenstand)
+    if (follows) this.player.root.position.y += this.jump.update(frame.pose, frame.now);
+    else this.jump.reset();
     this.player.root.visible = sourcePose ? follows : flex !== null && !filmed;
-    this.dots.visible = this.player.root.visible && (!solo || frame.mode === "skelett");
+    // Leuchtende Gelenkpunkte nur zur Hologramm-/Skelett-Darstellung, nicht auf dem realistischen Avatar
+    this.dots.visible = this.player.root.visible && !kitShown && (!solo || frame.mode === "skelett");
     if (!sourcePose && flex !== null && !filmed) this.player.pose(flex);
     this.updateFootShadows(this.trainer, 0, this.trainer.root.visible);
     this.updateFootShadows(this.player, 2, soloAvatar && this.player.root.visible);

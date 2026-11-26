@@ -133,7 +133,7 @@ export function TvScreen() {
           zonePacket = -1;
           analysis.reset();
         }
-        shown = fresh ? lerpPose(shown, fresh, 0.35) : null;
+        shown = fresh ? lerpPose(shown, fresh, 0.5) : null; // weich, aber ohne spürbare Verzögerung
         const now = performance.now();
         if (!shown || mode !== "spur") trail = [];
         else if (now - lastTrail > 90) {
@@ -153,7 +153,7 @@ export function TvScreen() {
           const running = hud?.stage === "training" && hud.running;
           const onStage = hasLiveStage(mode, s.state.avatar ?? "lukas");
           const drawn = onStage && arena.draw(ctx, {
-            v, room: s.state.arenaRoom ?? ARENA_ROOMS[0].id, studioRoom: roomById(s.state.room), mode,
+            v, room: s.state.arenaRoom ?? ARENA_ROOMS[0].id, studioRoom: roomById(s.state.room), avatar: s.state.avatar, trainer: s.state.trainer, mode,
             pose: shown, mask: null, bodyLoad: hud?.bodyLoad,
             speeds: mode === "zonen" ? analysis.jointSpeeds() : undefined,
             demo: s.state.demo, now, running, precision: hud?.lastScore ?? null,

@@ -32,7 +32,9 @@ test("Arena lädt lokal bei Bedarf, rendert in 3D und zählt im Demo-Training", 
   await expect(page.getByText(/\bbpm\b/)).toHaveCount(0);
   await expect.poll(cachedFiles).toContain("/arena/trainer.glb");
 
-  await page.getByRole("combobox", { name: "Arena-Raum" }).selectOption("lebombo");
+  await page.getByRole("button", { name: /^Arena:/ }).click();
+  await page.getByRole("dialog", { name: "Arena wählen" }).getByRole("button", { name: /Lebombo/ }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(canvas).toHaveAttribute("data-arena", "lebombo");
   await expect(canvas).toHaveAttribute("data-arena-renderer", "3d");
   await expect.poll(cachedFiles).toContain("/arena/lebombo.hdr");

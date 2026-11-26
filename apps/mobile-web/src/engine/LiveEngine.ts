@@ -44,6 +44,20 @@ export class LiveEngine {
   private stopped = false;
   private readonly smoother = new LandmarkSmoother();
   private readonly worldSmoother = new LandmarkSmoother();
+  /**
+   * Anzeige-Glätter: reagiert schnell (hohe Geschwindigkeitsanpassung), damit Figur und Silhouette schnellen
+   * Bewegungen und Sprüngen ohne Verzögerung folgen. Zählung und Bewertung nutzen weiter den ruhigen Glätter.
+   */
+  private readonly displaySmoother = new LandmarkSmoother(1.7, 3);
+  private readonly displayWorld = new LandmarkSmoother(1.7, 3);
+  /** Letzter Analysestand für die Darstellung (Kamera: eigene Zeichenschleife im Bildschirmtakt). */
+  private view: {
+    features: ReturnType<typeof extractSquatFeatures>;
+    depth: number | null;
+    phase: ReturnType<SquatCounter["update"]>["phase"] | null;
+    wantsBodyLoad: boolean;
+  } | null = null;
+  private renderRaf = 0;
   private calibrator = new Calibrator();
   private counter: SquatCounter | null = null;
   /** Körperanalyse (Live Body Load) – im Analysemodus und für Muskel-/Zonen-Ansicht. */
@@ -175,6 +189,7 @@ export class LiveEngine {
     this.stopped = true;
     detachLiveCanvas(this.canvas);
     cancelAnimationFrame(this.raf);
+    cancelAnimationFrame(this.renderRaf);
     if (this.videoCb && "cancelVideoFrameCallback" in this.video) this.video.cancelVideoFrameCallback(this.videoCb);
     if (this.goalTimer !== null) clearTimeout(this.goalTimer);
     this.goalTimer = null;
@@ -254,8 +269,11 @@ export class LiveEngine {
       aspect,
     };
     const features = extractSquatFeatures(smooth);
+    const display = this.displaySmoother.smooth(landmarks, now);
+    this.displayWorld.smooth(worldLandmarks, now);
     // Mit dem TV gekoppelt? Dann Gelenkpunkte (keine Bilder) weitergeben.
-    if (draw) sendPoseToTv(smooth.landmarks, aspect, this.source === "camera" ? this.mirror : true, now);
+    // (schnell geglättete Anzeige-Punkte: der Fernseher zeigt Bewegungen und Sprünge ohne Verzögerung)
+    if (draw) sendPoseToTv(display, aspect, this.source === "camera" ? this.mirror : true, now);
     const state = useApp.getState();
 
     let depth: number | null = null;
@@ -310,6 +328,7 @@ export class LiveEngine {
     }
 
     if (!draw) return;
+    this.view = { features, depth, phase, wantsBodyLoad };
     // Bewegungsspur nur pflegen, wenn sie angezeigt wird.
     if (state.viewMode !== "spur") this.trail = [];
     else if (landmarks && now - this.lastTrail > TRAIL_SAMPLE_MS && smooth.landmarks) {
@@ -328,6 +347,35 @@ export class LiveEngine {
       });
     }
 
+    // Kamera: gezeichnet wird in einer eigenen Schleife im Bildschirmtakt (Pose dazwischen vorausberechnet);
+    // Demo: die Posen entstehen ohnehin je Bildschirmbild.
+    if (this.source === "camera") {
+      if (!this.renderRaf) this.renderRaf = requestAnimationFrame(this.renderLoop);
+      return;
+    }
+    this.render(now);
+  }
+
+  private renderLoop = (): void => {
+    if (this.stopped) return;
+    try {
+      this.render(performance.now());
+    } catch (e) {
+      this.fail({ kind: "unknown", message: `Fehler in der Darstellung: ${String(e)}` });
+      return;
+    }
+    this.renderRaf = requestAnimationFrame(this.renderLoop);
+  };
+
+  /** Ein Bild zeichnen: Pose zum Zeitpunkt `now` (Kamera: aus dem letzten Messwert vorausberechnet). */
+  private render(now: number): void {
+    const view = this.view;
+    if (!view) return;
+    const { features, depth, wantsBodyLoad } = view;
+    const state = useApp.getState();
+    const live = this.source === "camera";
+    const pose = live ? this.displaySmoother.predict(now) : this.displaySmoother.predict(now, 0);
+    const worldPose = live ? this.displayWorld.predict(now) : this.displayWorld.predict(now, 0);
     const ctx = this.canvas.getContext("2d");
     if (ctx) {
       const v: Viewport = {
@@ -341,8 +389,8 @@ export class LiveEngine {
       if (hasLiveStage(state.viewMode, state.settings.avatar)) {
         const session = useApp.getState().session;
         if (this.arena.draw(ctx, {
-          v, room: state.settings.arenaRoom, studioRoom: roomById(state.settings.room), mode: state.viewMode,
-          pose: smooth.landmarks, worldPose: smooth.worldLandmarks, bodyLoad: this.lastBodyLoad,
+          v, room: state.settings.arenaRoom, studioRoom: roomById(state.settings.room), avatar: state.settings.avatar, trainer: state.settings.trainer, mode: state.viewMode,
+          pose, worldPose, bodyLoad: this.lastBodyLoad,
           speeds: wantsBodyLoad ? this.bodyLoad.jointSpeeds() : undefined, mask: this.mask, kneeAngle: features.kneeAngle,
           demo: this.source === "demo", now, activeMs: activeTimeMs(session, now),
           running: session.status === "running", precision: session.reps.at(-1)?.score.total ?? null,
@@ -356,7 +404,7 @@ export class LiveEngine {
         room: roomById(state.settings.room),
         avatar: avatarById(state.settings.avatar),
         video: this.source === "camera" ? this.video : null,
-        landmarks: smooth.landmarks,
+        landmarks: pose,
         mask: needsMask(state.viewMode) ? this.mask : null,
         trail: state.viewMode === "spur" ? this.trail : [],
         bodyLoad: this.lastBodyLoad,

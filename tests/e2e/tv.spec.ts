@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openTvPanel } from "./stage-colors";
 
 /**
  * TV-Modus mit lokalem Kanal (BroadcastChannel, ohne Netzwerk): zwei Seiten im selben Browser.
@@ -62,6 +63,7 @@ test("Code von Hand: erst nach Annehmen am Fernseher verbunden; Ablehnen und zwe
   // 1. Code eingetippt → TV fragt nach, Handy wartet
   const phone = await context.newPage();
   await phone.goto("/?transport=local");
+  await openTvPanel(phone);
   await phone.getByLabel("Code vom Fernseher").fill(code.toLowerCase());
   await phone.getByRole("button", { name: "Verbinden" }).click();
   await expect(phone.getByText(/am Fernseher auf „Annehmen“ drücken/)).toBeVisible();
@@ -74,6 +76,7 @@ test("Code von Hand: erst nach Annehmen am Fernseher verbunden; Ablehnen und zwe
 
   // 3. Erneut versuchen und annehmen → verbunden
   await phone.getByRole("button", { name: "Trennen" }).click();
+  await openTvPanel(phone);
   await phone.getByLabel("Code vom Fernseher").fill(code);
   await phone.getByRole("button", { name: "Verbinden" }).click();
   await tv.getByRole("button", { name: "Annehmen" }).click();
@@ -90,6 +93,7 @@ test("Code von Hand: erst nach Annehmen am Fernseher verbunden; Ablehnen und zwe
 
 test("ungültiger Code wird abgelehnt", async ({ page }) => {
   await page.goto("/?transport=local");
+  await openTvPanel(page);
   await page.getByLabel("Code vom Fernseher").fill("AB1");
   await page.getByRole("button", { name: "Verbinden" }).click();
   await expect(page.getByText("Ungültiger Code")).toBeVisible();

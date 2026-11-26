@@ -19,3 +19,10 @@ tests/screenshots/.results/
 # Lokale Modell-Versuche (Rekonstruktion, Generator-Exporte) und Sicherungen – nicht ins öffentliche Repo
 /assets-src/lukas-reconstruction/
 /assets-src/*.glb
+# Gekaufte/lizenzierte Modelle (Mixamo u. a.) – Rohdateien nie ins öffentliche Repo
+/assets-private/
+/assets-src/cc0/grab3d/
+/assets-src/menu-figures-raw/
+/assets-src/rocketbox/
+/assets-src/avatars/
+__pycache__/

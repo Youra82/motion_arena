@@ -206,6 +206,10 @@ export function synthPose(o: SynthOptions): { landmarks: Landmark[]; worldLandma
   const pts: P3[] = Array.from({ length: LANDMARK_COUNT }, () => ({ ...nose }));
   const set = (i: number, p: P3) => (pts[i] = p);
   set(LM.NOSE, nose);
+  // Ohren seitlich hinter der Nase (Kopfhaltung: Hals zur Ohrmitte, Gesicht zur Nase)
+  const ear = (lat: number): P3 => ({ lat, up: nose.up - 0.03, fwd: nose.fwd - 0.1 });
+  set(7, ear(0.075));
+  set(8, ear(-0.075));
   set(LM.LEFT_SHOULDER, ls);
   set(LM.RIGHT_SHOULDER, rs);
   set(LM.LEFT_ELBOW, le);

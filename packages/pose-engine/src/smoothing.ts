@@ -49,11 +49,23 @@ export class OneEuroFilter {
     this.tPrev = null;
     this.dxPrev = 0;
   }
+
+  /** Letzter geglätteter Wert (null vor der ersten Messung). */
+  get value(): number | null {
+    return this.xPrev;
+  }
+
+  /** Geglättete Geschwindigkeit je Sekunde. */
+  get velocity(): number {
+    return this.dxPrev;
+  }
 }
 
 /** Glättet alle Koordinaten eines Landmark-Satzes; Sichtbarkeit bleibt ungeglättet. */
 export class LandmarkSmoother {
   private filters: OneEuroFilter[][] = [];
+  private last: Landmark[] | null = null;
+  private tLast = 0;
 
   constructor(
     private readonly minCutoff = 1.2,
@@ -65,10 +77,11 @@ export class LandmarkSmoother {
       this.reset();
       return null;
     }
+    this.tLast = tMs;
     if (this.filters.length !== landmarks.length) {
       this.filters = landmarks.map(() => [0, 1, 2].map(() => new OneEuroFilter(this.minCutoff, this.beta)));
     }
-    return landmarks.map((p, i) => {
+    this.last = landmarks.map((p, i) => {
       const f = this.filters[i]!;
       return {
         x: f[0]!.filter(p.x, tMs),
@@ -77,9 +90,27 @@ export class LandmarkSmoother {
         visibility: p.visibility,
       };
     });
+    return this.last;
+  }
+
+  /**
+   * Pose zum Zeitpunkt `tMs` vorausberechnen: letzter geglätteter Wert + geglättete Geschwindigkeit × Abstand,
+   * höchstens `maxAheadMs` weit (die Erkennung liefert seltener, als der Bildschirm zeichnet). So bewegt sich die
+   * Figur zwischen zwei Kamerabildern weiter, statt im Erkennungstakt zu springen.
+   */
+  predict(tMs: number, maxAheadMs = 50): Landmark[] | null {
+    if (!this.last) return null;
+    const dt = Math.min(Math.max(0, tMs - this.tLast), maxAheadMs) / 1000;
+    if (dt === 0) return this.last;
+    return this.last.map((p, i) => {
+      const f = this.filters[i];
+      if (!f) return p;
+      return { x: p.x + f[0]!.velocity * dt, y: p.y + f[1]!.velocity * dt, z: p.z + f[2]!.velocity * dt, visibility: p.visibility };
+    });
   }
 
   reset(): void {
     this.filters = [];
+    this.last = null;
   }
 }

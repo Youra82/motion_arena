@@ -12,6 +12,10 @@ export interface ArenaFrame {
   v: Viewport;
   room: ArenaRoom;
   studioRoom?: RoomDef;
+  /** Dein Avatar (id) – folgt deiner Bewegung, neben dem Trainer und in der Ansicht „Avatar“. */
+  avatar?: string;
+  /** Trainer-Avatar (id) – macht die Übung vor. */
+  trainer?: string;
   mode?: ViewMode;
   pose: Landmark[] | null;
   worldPose?: Landmark[] | null;
