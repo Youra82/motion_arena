@@ -2,6 +2,7 @@ import type { TrainingEntry } from "@motion-arena/motion-scoring";
 import { isViewMode, type ViewMode } from "./view-modes";
 import { DEFAULT_ROOM, isRoomId } from "./render/rooms";
 import { DEFAULT_AVATAR, isAvatarId } from "./render/avatars";
+import { ARENA_ROOMS, isArenaRoom, type ArenaRoom } from "./arena/rooms";
 
 /**
  * Speicherung auf dem Gerät (localStorage). Nichts wird übertragen.
@@ -24,9 +25,10 @@ export interface Settings {
   room: string;
   /** Avatar für die Ansicht „Avatar“. */
   avatar: string;
+  arenaRoom: ArenaRoom;
 }
 
-export const DEFAULT_SETTINGS: Settings = { modelVariant: "lite", defaultTarget: 10, defaultView: "hybrid", weeklyGoal: 3, tvVideo: "ask", room: DEFAULT_ROOM, avatar: DEFAULT_AVATAR };
+export const DEFAULT_SETTINGS: Settings = { modelVariant: "lite", defaultTarget: 10, defaultView: "arena", weeklyGoal: 3, tvVideo: "ask", room: DEFAULT_ROOM, avatar: DEFAULT_AVATAR, arenaRoom: ARENA_ROOMS[0].id };
 
 /** Speicher des Browsers; null = gibt es nicht, "denied" = Zugriff verweigert (z. B. Datenschutzeinstellung). */
 function storage(): Storage | null | "denied" {
@@ -115,6 +117,7 @@ export function loadSettings(): Settings {
     tvVideo: v.tvVideo === "on" || v.tvVideo === "off" ? v.tvVideo : "ask",
     room: isRoomId(v.room) ? v.room : DEFAULT_SETTINGS.room,
     avatar: isAvatarId(v.avatar) ? v.avatar : DEFAULT_SETTINGS.avatar,
+    arenaRoom: isArenaRoom(v.arenaRoom) ? v.arenaRoom : DEFAULT_SETTINGS.arenaRoom,
   };
 }
 

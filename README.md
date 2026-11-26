@@ -2,7 +2,8 @@
 
 **Fitness-Bewegungsspiel für Smartphone und Browser.** Die Kamera erfasst die Person, MediaPipe Pose schätzt die
 Körperhaltung, Kniebeugen werden live gezählt, verständlich bewertet und mit Punkten und Combos belohnt. Dazu:
-10 Ansichten der Körperspiegelung, eine Live-Körperanalyse, 15 Avatare in 20 Trainingsräumen und ein TV-Modus.
+die 3D-Trainingsansicht Arena, 10 weitere Ansichten der Körperspiegelung, eine Live-Körperanalyse,
+15 Avatare in 20 Trainingsräumen und ein TV-Modus.
 Die Erkennung läuft lokal auf dem Gerät – Kamerabild und Bewegungsdaten verlassen das Handy nur, wenn du selbst einen
 Fernseher koppelst (dann direkt zu diesem, das Bild nur mit deiner Zustimmung).
 
@@ -19,11 +20,11 @@ oder <a href="https://youra82.github.io/motion_arena/?install=1"><b>youra82.gith
 </td>
 </tr></table>
 
-> **Stand:** Version 0.2 – Übung Kniebeuge, Startseite mit Fortschritt, alle 10 Ansichten, Live-Körperanalyse,
-> TV-Modus, Avatare und Räume. Abgesichert mit 235 Unit-Tests und 30 Browsertests, gehärtet in fünf unabhängigen
-> Prüfrunden (Codex). **Noch nicht erfolgt:** der Test mit einer echten Person vor einer echten Handykamera und auf
+> **Stand:** Version 0.2 – Übung Kniebeuge, 3D-Arena, Startseite mit Fortschritt, Live-Körperanalyse,
+> TV-Modus, Avatare und Räume. Abgesichert mit 242 Unit-Tests und 34 Browsertests. **Noch nicht erfolgt:** der Test mit einer echten Person vor einer echten Handykamera und auf
 > einem echten Fernseher – siehe [Status](docs/STATUS.md).
 
+<p align="center"><img src="docs/screenshots/45-arena.png" width="770" alt="3D-Arena: Hologramm-Spieler, Trainer und Trainingsanzeige im Core Studio" /></p>
 <p align="center">
   <img src="docs/screenshots/01-start.png" width="190" alt="Startseite" />
   <img src="docs/screenshots/05-wiederholung-gezaehlt.png" width="190" alt="Wiederholung gezählt" />
@@ -65,10 +66,11 @@ oder <a href="https://youra82.github.io/motion_arena/?install=1"><b>youra82.gith
 | **Unsichere Erkennung** | Teilkörper, geringe Konfidenz, Kameralücken, Blickwinkelwechsel → **Warnung statt Wertung**, keine Strafpunkte, Combo bleibt erhalten |
 | **Bewertung** | Schematische Punkte 0–100 aus Tiefe, Kontrolle, Links/Rechts-Symmetrie und (nur seitlich) Haltung, jeweils mit Hinweis „geschätzt“ |
 | **Spiel** | Punkte, Combo-Bonus bis +50 %, Ziel 5/10/15/20 Wiederholungen, Countdown, Pause, Ergebnisseite |
+| **3D-Arena** | 20 Raummotive plus Lebombo, animierter Kniebeugen-Trainer, leuchtendes Hologramm mit Nachbildern, Präzisionsring und Trainingsanzeige. Standard für neue Einstellungen und Demo. |
 | **Startseite & Fortschritt** | Startseite im Kinetic-Studio-Stil mit Versionsnummer, Bewegungspräzision des letzten Trainings, Wochenplan mit Wochenziel, 30-Tage-Challenge, Serie, Verlauf der letzten 14 Tage. Nur echte Kamera-Trainings zählen; gespeichert nur auf dem Gerät (höchstens 1000 Einträge) |
-| **10 Ansichten** | Hybrid (Video + Skelett), Echtbild, Silhouette (lokale Personenmaske), Skelett, **Gittermodell**, **Hologramm**, **Avatar**, **Muskelansicht** (geschätzte Beanspruchung), **Bewegungszonen** (Bewegungsintensität), Bewegungsspur. Wechsel jederzeit ohne Datenverlust |
+| **10 Ansichten** | Echtbild, grüne Silhouette, geteilte Hybridansicht aus freigestelltem Kamerabild und Hologramm, Skelett, Gittermodell, Hologramm, Avatar, Muskelansicht (geschätzte Beanspruchung), Bewegungszonen (Bewegungsintensität), Bewegungsspur. Die geriggte 3D-Figur folgt den erkannten Körperpunkten. |
 | **Live-Körperanalyse** | Freier Modus ohne Übung: erkennt Stehen, Kniebeuge, Einbeinstand, Ausfallschritt, Hampelmann, Arme heben, Stütz – sonst „unbekannt“ statt geraten. Trennt **Bewegungsintensität** von **vermuteter Beanspruchung** je Körperzone (gering/mittel/hoch/unsicher, keine Prozente), Körperschema mit deiner linken/rechten Seite |
-| **Avatare & Räume** | 15 eigenständig gestaltete Avatare (Lukas … Echo, stilisiert 2D) folgen live der Bewegung; 20 Trainingsräume (Core Studio … Sunrise Deck) als Hintergrund aller Ansichten ohne Kamerabild, mit dezenter Lichtreaktion auf Beugetiefe und Wiederholungen |
+| **Avatare & Räume** | 20 Trainingsräume (Core Studio … Sunrise Deck) als fotografische Kulisse der Arena – Figuren stehen je Raum auf dem Boden (Standhöhe je Raumbild, bei Bedarf Plattform). Als 3D-Figur animiert ist Trainer Lukas (CC0-Modell, ausstaffiert); die 15 Avatare (Lukas … Echo) erscheinen als Porträtkarten. Quellen und Lizenzen: [docs/ASSETS.md](docs/ASSETS.md) |
 | **TV-Modus** | Fernseher zeigt **dasselbe wie die App** – gleiche Anzeige im gleichen Seitenverhältnis, mit Zustimmung als Live-Bild 1:1. Kopplung per QR-Code (sofort) oder Code (Bestätigung am Fernseher), direkt per WebRTC |
 | **Signaturen** | Präzisionsring am Boden (zeigt die Beugetiefe, leuchtet bei gezählter Wiederholung), Bewegungsspur mit Nachbildern |
 | **Installierbar** | Per QR-Code auf dem Handy installieren: Android mit einem Tipp („Jetzt installieren“), iPhone mit geführter Anleitung. Startet ohne Browserleiste und funktioniert danach **offline** (Service Worker speichert App, Erkennung und Modell) |
@@ -84,6 +86,16 @@ Jeder Bildschirm und Zustand, den die App darstellen kann. Die Bilder erzeugt `p
 ([tests/screenshots/](tests/screenshots/)) automatisch – nach jeder Oberflächenänderung neu erzeugbar.
 **Demo-Bilder** zeigen synthetische Bewegung, **Kamera-Bilder** die Chrome-Testkamera ohne Person, der Verlauf unter
 „Fortschritt“ ist ein Beispiel.
+
+### 3D-Arena
+
+<p align="center"><img src="docs/screenshots/51-arena-20-raeume.jpg" width="900" alt="Die Arena in allen 20 Räumen" /><br/>
+<sub>Die Arena in allen 20 Räumen (Demo): Hologramm-Spieler und Trainer stehen jeweils auf dem Boden des Raumbilds.</sub></p>
+
+<table>
+<tr><td align="center" valign="top" width="50%"><img src="docs/screenshots/46-koerperanalyse-3d.png" width="420" alt="3D-Körperanalyse" /><br/><b>3D-Körperanalyse</b><br/><sub>Vermutete Bewegung und geschätzte Beanspruchung auf der Figur</sub></td>
+<td align="center" valign="top" width="50%"><img src="docs/screenshots/48-lukas-live.png" width="420" alt="Ansicht Avatar" /><br/><b>Ansicht „Avatar“</b><br/><sub>Lukas als 3D-Figur folgt der Bewegung</sub></td></tr>
+</table>
 
 ### Startseite und Bereiche
 
@@ -103,6 +115,9 @@ Jeder Bildschirm und Zustand, den die App darstellen kann. Die Bilder erzeugt `p
 
 ### Training
 
+<p align="center"><img src="docs/screenshots/45-arena.png" width="820" alt="3D-Arena mit einem türkisfarbenen Hologramm und einem Trainer bei der Kniebeuge" /><br/>
+<sub>3D-Arena im Core Studio, aufgenommen im laufenden Demo-Training. <a href="docs/ASSETS.md">Grafikquellen</a></sub></p>
+
 <table>
 <tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/05-wiederholung-gezaehlt.png" width="230" alt="Wiederholung gezählt" /><br/><b>Wiederholung gezählt</b><br/><sub>Zähler, Punkte, Rückmeldung, leuchtender Präzisionsring, Raumlicht</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/09-feedback-zu-flach.png" width="230" alt="Zu flach" /><br/><b>Zu flach</b><br/><sub>Nicht gezählt, kurze Erklärung, Combo endet ohne Punktabzug</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/10-warnung-keine-person.png" width="230" alt="Warnung statt Wertung" /><br/><b>Warnung statt Wertung</b><br/><sub>Person verschwindet: Banner, keine Wertung, Combo bleibt</sub></td></tr>
 <tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/13-ziel-erreicht-live.png" width="230" alt="Ziel erreicht" /><br/><b>Ziel erreicht</b><br/><sub>Letzte Wiederholung, danach automatisch zum Ergebnis</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/11-pause.png" width="230" alt="Pause" /><br/><b>Pause</b><br/><sub>Fortsetzen, neu kalibrieren oder beenden</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/12-ergebnis.png" width="230" alt="Ergebnis" /><br/><b>Ergebnis</b><br/><sub>Wiederholungen, Punkte, Ø-Bewertung, Combo, Zeit, nicht gezählte Versuche</sub></td></tr>
@@ -119,6 +134,8 @@ Jeder Bildschirm und Zustand, den die App darstellen kann. Die Bilder erzeugt `p
 </table>
 
 ### Live-Körperanalyse
+
+<p align="center"><img src="docs/screenshots/46-koerperanalyse-3d.png" width="820" alt="Live-Körperanalyse mit einem Ausfallschritt der 3D-Figur und markierten Körperzonen" /></p>
 
 <table>
 <tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/38-analyse-kniebeuge.png" width="230" alt="Kniebeuge erkannt" /><br/><b>Kniebeuge erkannt</b><br/><sub>Vermutete Bewegung, Intensität, Körperschema mit L/R</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/38b-analyse-einbeinstand.png" width="230" alt="Einbeinstand erkannt" /><br/><b>Einbeinstand erkannt</b><br/><sub>Standbein stärker beansprucht (geschätzt)</sub></td></tr>
@@ -607,8 +624,8 @@ motion_arena/
 ## Tests
 
 ```bash
-pnpm test        # 235 Tests
-pnpm build && pnpm e2e   # 30 Browsertests
+pnpm test        # 242 Tests
+pnpm build && pnpm e2e   # 34 Browsertests
 ```
 
 | Ebene | Inhalt |
@@ -668,8 +685,10 @@ Aufträge und Berichte liegen in [`docs/reviews/`](docs/reviews/), die Codex-Tes
   schräge oder seitliche Aufstellung.
 - Die **Live-Körperanalyse** zeigt eine grobe, modellbasierte **Vermutung**, welche Zonen beansprucht werden – keine
   Messung von Muskelaktivität, Kräften, Gewichtsverteilung oder Verletzungsrisiko.
-- **Avatare und Räume** sind eigenständig gestaltete, **stilisierte 2D-Zeichnungen** (ohne Gesichter), kein riggbares
-  3D-Modell und keine Nachbildung der Konzeptbilder.
+- **3D-Figuren:** Animiert ist bisher ein Trainer (Lukas, CC0-Grundmodell ausstaffiert); die übrigen 14 Avatare
+  gibt es nur als Porträt – fotorealistische riggbare Modelle je Person bräuchten lizenzierte Assets. Einige Raumbilder
+  sind aus den Konzeptkarten hochskaliert und etwas weicher; Waterfall Oasis nutzt eine Plattform, weil das Bild im
+  Vordergrund nur Wasser zeigt.
 - Nur die Übung Kniebeuge wird gezählt und bewertet.
 - **TV-Modus ohne Relay:** Lassen Router/Firewall keine direkte Verbindung zu, klappt die Kopplung nicht (kein Umweg
   über fremde Server).

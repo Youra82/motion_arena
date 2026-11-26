@@ -102,13 +102,44 @@ function drawVideo(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, v: Vi
   ctx.restore();
 }
 
-/** Zeichnet die fertig eingefärbte Personenmaske (vom Detektor) passend zum Kamerabild. */
+let cameraMatte: HTMLCanvasElement | undefined;
+
+/** Reuse a small compositing canvas for the cut-out live image and the colored mask. */
+function matte(mask: HTMLCanvasElement, video?: HTMLVideoElement): HTMLCanvasElement | null {
+  if (!mask.width || !mask.height) return null;
+  cameraMatte ??= document.createElement("canvas");
+  const c = cameraMatte;
+  if (c.width !== mask.width || c.height !== mask.height) {
+    c.width = mask.width;
+    c.height = mask.height;
+  }
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.drawImage(mask, 0, 0);
+  ctx.globalCompositeOperation = "source-in";
+  if (video) ctx.drawImage(video, 0, 0, c.width, c.height);
+  else {
+    const green = ctx.createLinearGradient(0, 0, c.width, c.height);
+    green.addColorStop(0, "#83c32b");
+    green.addColorStop(0.48, "#b3f548");
+    green.addColorStop(1, "#466e10");
+    ctx.fillStyle = green;
+    ctx.fillRect(0, 0, c.width, c.height);
+  }
+  ctx.globalCompositeOperation = "source-over";
+  return c;
+}
+
+/** Zeichnet die leuchtend grüne Personenmaske des Detektors passend zum Kamerabild. */
 function drawMask(ctx: CanvasRenderingContext2D, mask: HTMLCanvasElement, v: Viewport, f: Fit): void {
+  const cutout = matte(mask);
+  if (!cutout) return;
   ctx.save();
   if (v.mirror) ctx.setTransform(-1, 0, 0, 1, v.cw, 0);
-  ctx.shadowColor = COLORS.motion;
+  ctx.shadowColor = "#a5ff3b";
   ctx.shadowBlur = 18;
-  ctx.drawImage(mask, f.ox, f.oy, f.dw, f.dh);
+  ctx.drawImage(cutout, f.ox, f.oy, f.dw, f.dh);
   ctx.restore();
 }
 
@@ -134,7 +165,7 @@ function bodyScale(lms: Landmark[], v: Viewport, f: Fit): number {
   return Math.max(20, lens.reduce((x, y) => x + y, 0) / lens.length);
 }
 
-function drawSkeleton(ctx: CanvasRenderingContext2D, lms: Landmark[], v: Viewport, f: Fit, alpha = 1, width = 4): void {
+export function drawSkeleton(ctx: CanvasRenderingContext2D, lms: Landmark[], v: Viewport, f: Fit, alpha = 1, width = 4): void {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.lineCap = "round";
@@ -360,7 +391,7 @@ function drawMuscleView(ctx: CanvasRenderingContext2D, lms: Landmark[], load: Bo
 /** Farbe für Geschwindigkeit (m/s): Türkis (ruhig) → Gelb → Koralle (lebhaft). */
 const NEUTRAL = "#5D6B6E";
 let rmQuery: MediaQueryList | null | undefined;
-function reducedMotion(): boolean {
+export function reducedMotion(): boolean {
   if (rmQuery === undefined) rmQuery = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
   return !!rmQuery?.matches;
 }
@@ -452,7 +483,7 @@ const HOLO_SCALE = 0.5;
 let scanPattern: CanvasPattern | null = null;
 
 /** Füllt die stilisierte Körperform (für Hologramm ohne Kameramaske, z. B. Demo). */
-function fillBodyShape(ctx: CanvasRenderingContext2D, lms: Landmark[], v: Viewport, f: Fit): void {
+export function fillBodyShape(ctx: CanvasRenderingContext2D, lms: Landmark[], v: Viewport, f: Fit): void {
   const P = (i: number): Pt => toPx(lms[i]!, v, f);
   const s = bodyShape(P, bodyScale(lms, v, f));
   ctx.beginPath();
@@ -473,13 +504,14 @@ function fillBodyShape(ctx: CanvasRenderingContext2D, lms: Landmark[], v: Viewpo
 }
 
 /** Hologramm: Körperform (Kameramaske oder stilisiert) mit Verlauf, Scanlines, Leuchten und Flimmern. */
-function drawHologram(
+export function drawHologram(
   ctx: CanvasRenderingContext2D,
   lms: Landmark[] | null,
   mask: HTMLCanvasElement | null,
   v: Viewport,
   f: Fit,
   now: number,
+  steady = false,
 ): void {
   if (!lms && !mask) return;
   if (!holoCanvas) holoCanvas = document.createElement("canvas");
@@ -498,7 +530,10 @@ function drawHologram(
   h.fillStyle = "#fff";
   h.strokeStyle = "#fff";
   if (mask) {
-    if (v.mirror) h.setTransform(-HOLO_SCALE, 0, 0, HOLO_SCALE, hw, 0);
+    if (v.mirror) {
+      h.translate(2 * f.ox + f.dw, 0);
+      h.scale(-1, 1);
+    }
     h.drawImage(mask, f.ox, f.oy, f.dw, f.dh);
   } else if (lms) {
     fillBodyShape(h, lms, v, f);
@@ -523,7 +558,8 @@ function drawHologram(
     tc.fillRect(0, 0, 1, 1);
     scanPattern = h.createPattern(tile, "repeat");
   }
-  const offset = reducedMotion() ? 0 : Math.floor(now / 40) % 3;
+  const calm = reducedMotion();
+  const offset = calm ? 0 : Math.floor(now / 40) % 3;
   if (scanPattern) {
     h.translate(0, offset);
     h.fillStyle = scanPattern;
@@ -532,15 +568,14 @@ function drawHologram(
   h.restore();
   // 3. Auf die Szene: leuchtend, leicht flimmernd, gelegentlich ein verschobener Streifen
   // Bei "Bewegung reduzieren" (Systemeinstellung) ruhiges Hologramm ohne Flackern und Bildsprünge.
-  const calm = reducedMotion();
-  const flicker = calm ? 0.9 : 0.82 + 0.12 * Math.sin(now / 90) + (Math.random() < 0.03 ? -0.25 : 0);
+  const flicker = calm || steady ? 0.9 : 0.82 + 0.12 * Math.sin(now / 90) + (Math.random() < 0.03 ? -0.25 : 0);
   ctx.save();
   ctx.globalAlpha = Math.max(0.4, Math.min(1, flicker));
   ctx.globalCompositeOperation = "lighter";
   ctx.shadowColor = COLORS.motion;
   ctx.shadowBlur = 22;
   ctx.drawImage(holoCanvas, 0, 0, v.cw, v.ch);
-  if (!calm && Math.random() < 0.06) {
+  if (!calm && !steady && Math.random() < 0.06) {
     const y = Math.random() * v.ch;
     const sh = 6 + Math.random() * 18;
     ctx.drawImage(holoCanvas, 0, y * HOLO_SCALE, hw, sh * HOLO_SCALE, (Math.random() - 0.5) * 14, y, v.cw, sh);
@@ -597,7 +632,7 @@ export function drawHeroScene(ctx: CanvasRenderingContext2D, w: number, h: numbe
  * Pose für die Darstellung absichern: fehlende/ungültige Punkte werden unsichtbar (werden dann ausgelassen).
  * Ohne brauchbaren Rumpf (Schultern + Hüften, nicht zusammengefallen) wird keine Figur gezeichnet.
  */
-function usablePose(raw: Landmark[] | null, v: Viewport, f: Fit): Landmark[] | null {
+export function usablePose(raw: Landmark[] | null, v: Viewport, f: Fit): Landmark[] | null {
   if (!raw) return null;
   const lms: Landmark[] = Array.from({ length: 33 }, (_, i) => {
     const p = raw[i];
@@ -618,9 +653,31 @@ export function drawFrame(d: DrawInput): void {
   ctx.clearRect(0, 0, v.cw, v.ch);
 
   const hasVideo = !!video && video.readyState >= 2;
-  if ((mode === "echtbild" || mode === "hybrid") && hasVideo) drawVideo(ctx, video!, v, f);
+  const splitImage = mode === "hybrid" && hasVideo && lms && d.mask;
+  if ((mode === "echtbild" || mode === "hybrid") && hasVideo && !splitImage) drawVideo(ctx, video!, v, f);
   else if (d.room) drawRoom(ctx, d.room, v.cw, v.ch, roomLight(d.ring));
   else drawBackdrop(ctx, v);
+
+  if (splitImage) {
+    const split = (toPx(lms[LM.LEFT_HIP]!, v, f)[0] + toPx(lms[LM.RIGHT_HIP]!, v, f)[0]) / 2;
+    const foreground = matte(d.mask!, video!);
+    if (foreground) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, split, v.ch);
+      ctx.clip();
+      if (v.mirror) ctx.setTransform(-1, 0, 0, 1, v.cw, 0);
+      ctx.drawImage(foreground, f.ox, f.oy, f.dw, f.dh);
+      ctx.restore();
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(split, 0, Math.max(0, v.cw - split), v.ch);
+      ctx.clip();
+      drawHologram(ctx, lms, d.mask, v, f, d.ring.now, true);
+      drawSkeleton(ctx, lms, v, f, 0.7, 3);
+      ctx.restore();
+    }
+  }
 
   if (mode === "silhouette") {
     if (d.mask) drawMask(ctx, d.mask, v, f);
@@ -633,7 +690,7 @@ export function drawFrame(d: DrawInput): void {
   if (mode === "hologramm") drawHologram(ctx, lms, d.mask, v, f, d.ring.now);
 
   if (lms) {
-    if (mode === "hybrid" || mode === "skelett" || mode === "spur") drawSkeleton(ctx, lms, v, f);
+    if ((mode === "hybrid" && !splitImage) || mode === "skelett" || mode === "spur") drawSkeleton(ctx, lms, v, f);
     if (mode === "gitter") drawWireframe(ctx, lms, v, f);
     if (mode === "muskel") drawMuscleView(ctx, lms, d.bodyLoad ?? null, v, f);
     if (mode === "zonen") drawMotionZones(ctx, lms, d.jointSpeeds ?? null, v, f);

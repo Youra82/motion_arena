@@ -1,6 +1,7 @@
 import type { BodyLoadResult } from "@motion-arena/motion-scoring";
 import type { TrackingQuality } from "@motion-arena/shared";
 import type { AppState, Feedback } from "../store";
+import { activeTimeMs, arenaChecks, estimateKcal, type ArenaChecks } from "../arena/metrics";
 
 /**
  * Alles, was die Live-Anzeige darstellt – serialisierbar, damit der Fernseher exakt dieselbe Anzeige
@@ -27,6 +28,8 @@ export interface HudView {
   calib: { progress: number; message: string } | null;
   countdown: number;
   countdownHold: boolean;
+  /** Optional für Fernseher und Handys mit älterem Protokollstand. */
+  arena?: { activeMs: number; kcal: number; checks: ArenaChecks };
 }
 
 const PHASE_LABEL = { standing: "Bereit", descending: "Runter", ascending: "Hoch", uncertain: "Unsicher" } as const;
@@ -37,7 +40,7 @@ export function qualityHint(q: TrackingQuality): string {
   return "Erkennung unsicher – mehr Licht oder etwas Abstand. Keine Wertung.";
 }
 
-export function hudViewFrom(s: AppState): HudView {
+export function hudViewFrom(s: AppState, now = performance.now()): HudView {
   const { hud, session } = s;
   const running = session.status === "running";
   const last = session.reps[session.reps.length - 1];
@@ -68,5 +71,12 @@ export function hudViewFrom(s: AppState): HudView {
       : null,
     countdown: s.countdown,
     countdownHold: hud.quality.status !== "ok",
+    ...(s.viewMode === "arena" && {
+      arena: {
+        activeMs: Math.round(activeTimeMs(session, now)),
+        kcal: estimateKcal(session.reps),
+        checks: arenaChecks(showBanner ? undefined : last?.score),
+      },
+    }),
   };
 }

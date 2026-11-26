@@ -60,15 +60,15 @@ test("Silhouette zeigt die Person (GPU-Maske), ohne WebGL-Lesefehler", async ({ 
   await expect(page.getByText("Erkennung gut")).toBeVisible({ timeout: 60_000 });
   await page.getByRole("button", { name: "Silhouette" }).click();
 
-  const tealPixels = () =>
+  const limePixels = () =>
     page.evaluate(() => {
-      const c = document.querySelector("canvas")!;
+      const c = document.querySelector<HTMLCanvasElement>('canvas[aria-label="Live-Ansicht mit Körpererkennung"]')!;
       const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
       let n = 0;
-      for (let i = 0; i < d.length; i += 4) if (d[i + 1]! > 150 && d[i + 2]! > 150 && d[i]! < 140) n++;
+      for (let i = 0; i < d.length; i += 4) if (d[i + 1]! > 165 && d[i + 1]! > d[i]! + 35 && d[i + 2]! < 110) n++;
       return n;
     });
-  await expect.poll(tealPixels, { timeout: 10_000 }).toBeGreaterThan(2000);
+  await expect.poll(limePixels, { timeout: 10_000 }).toBeGreaterThan(2000);
   await page.screenshot({ path: "tests/e2e/.results/screens/11-silhouette-person.png" });
   expect(glErrors).toEqual([]);
   await browser.close();

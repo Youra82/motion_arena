@@ -26,7 +26,7 @@ test("Demo: Kalibrierung → Training → Ansichtswechsel ohne Datenverlust → 
   // Ansichtswechsel: Zähler und Punkte bleiben erhalten.
   const before = await page.locator(".hud-points").textContent();
   const repsBefore = await reps.textContent();
-  for (const mode of ["Bewegungsspur", "Avatar (Platzhalter)", "Skelett"]) {
+  for (const mode of ["Bewegungsspur", "Avatar", "Skelett"]) {
     await page.getByRole("button", { name: mode }).click();
     await page.waitForTimeout(400);
     if (mode !== "Skelett") await page.screenshot({ path: `${shots}/04-ansicht-${mode.split(" ")[0]}.png` });

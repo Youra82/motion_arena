@@ -1,5 +1,6 @@
 import { seededRng, synthPose, type SynthOptions } from "@motion-arena/pose-engine";
 import type { Landmark } from "@motion-arena/shared";
+import { GUIDE_CYCLE_MS, squatFlex } from "../arena/metrics";
 
 /**
  * DEMO-Quelle: synthetische Kniebeugen ohne Kamera (klar gekennzeichnet in der UI).
@@ -52,14 +53,10 @@ export class DemoSource {
   private flexAt(ms: number): number {
     const stand = 2500;
     if (ms < stand) return 0;
-    const cycle = 3200;
-    const k = Math.floor((ms - stand) / cycle);
-    const p = ((ms - stand) % cycle) / cycle;
+    const k = Math.floor((ms - stand) / GUIDE_CYCLE_MS);
+    const p = ((ms - stand) % GUIDE_CYCLE_MS) / GUIDE_CYCLE_MS;
     const depth = k % 5 === 3 ? 45 : 92 + 6 * Math.sin(k); // jede 5. flach
-    if (p < 0.35) return depth * easeInOut(p / 0.35);
-    if (p < 0.45) return depth;
-    if (p < 0.8) return depth * (1 - easeInOut((p - 0.45) / 0.35));
-    return 0;
+    return squatFlex(p, depth);
   }
 
   frame(now: number): { landmarks: Landmark[] | null; worldLandmarks: Landmark[] | null } {

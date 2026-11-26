@@ -38,9 +38,13 @@
 14 Zara — Dance
 15 Echo — Challenges
 Rollen: Trainer, Spieler-Avatar oder Challenge-Gegner. Gemeinsames riggbares Skelett anstreben. Konzeptbilder sind keine riggbaren Modelle.
-Umsetzungsstand: 15 prozedural gezeichnete, stilisierte 2D-Avatare (ohne Gesichter) und 20 gezeichnete Räume; 3D-Avatare erst mit lizenzierten Assets.
+Umsetzungsstand: 15 Porträts aus der Projektvorlage. Lukas folgt den Körperpunkten als geriggte 3D-Figur. Die anderen 14 Avatare verwenden ihre bisherigen beweglichen 2D-Figuren, bis individuelle Rigs vorliegen. Die 20 Raumvorlagen sind im Live-Training als Bildkulissen verfügbar.
 
-## 10 Spiegelungsmodi
+## 3D-Arena
+
+Standardansicht für das Kniebeugentraining mit zwei Arenaräumen, einem prozedural animierten 3D-Trainer und einem Spielerhologramm. Der Fernseher nutzt dieselben Anzeigedaten und zeichnet die Arena bei deaktivierter Bildfreigabe aus Körperpunkten. [Asset-Lizenzen](ASSETS.md)
+
+## Weitere Spiegelungsmodi
 01 Echtbild; 02 Silhouette; 03 Skelett; 04 Gittermodell; 05 Hologramm; 06 3D-Avatar (Zielbild; umgesetzt als stilisierter 2D-Avatar); 07 Muskelansicht (schematische Beanspruchung); 08 Bewegungszonen (relative Beanspruchung/Bewegungsqualität getrennt); 09 Bewegungsspur; 10 Hybrid (Echtbild + Overlay).
 
 ## Priorität

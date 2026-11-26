@@ -10,6 +10,10 @@ import { VIEW_MODES, actions, type ViewMode } from "../store";
 import { approvePhone, rejectPhone, startTvHost, stopTvHost, useTvHost } from "../tv/tv-host";
 import { transportKind } from "../tv/transport";
 import { VERSION_LABEL } from "../version";
+import { ArenaRenderer, arenaDpr } from "../arena/arena-renderer";
+import { ARENA_ROOMS } from "../arena/rooms";
+import { hasLiveStage } from "../view-modes";
+import { BodyLoadAnalyzer } from "@motion-arena/motion-scoring";
 
 /** Link im QR-Code: Code + geheimer Schlüssel (wer den QR-Code sieht, koppelt ohne Rückfrage). */
 function pairUrl(code: string, secret: string | null): string {
@@ -92,22 +96,45 @@ export function TvScreen() {
     // Bewegungsspur wie am Handy: alle ~90 ms eine Pose, die letzten 10
     let trail: Landmark[][] = [];
     let lastTrail = 0;
+    const arena = new ArenaRenderer();
+    const analysis = new BodyLoadAnalyzer();
+    let zonePacket = -1;
+    let arenaCanvas: HTMLCanvasElement | null = null;
+    let arenaTime = 0;
+    let arenaTimeReceived = 0;
     const loop = () => {
       const c = canvasRef.current;
       const s = useTvHost.getState();
+      if (arenaCanvas && (arenaCanvas !== c || !s.state)) {
+        arena.leave(arenaCanvas);
+        arenaCanvas = null;
+        analysis.reset();
+        zonePacket = -1;
+      }
       if (c && s.state) {
-        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        arenaCanvas = c;
+        const mode = figureMode(s.state.viewMode);
         const k = Math.min(innerWidth / s.state.viewport.w, innerHeight / s.state.viewport.h);
-        const w = Math.round(s.state.viewport.w * k * dpr);
-        const h = Math.round(s.state.viewport.h * k * dpr);
+        const width = s.state.viewport.w * k;
+        const height = s.state.viewport.h * k;
+        const pixelRatio = window.devicePixelRatio || 1;
+        const dpr = mode === "arena" ? arenaDpr(width, height, pixelRatio) : Math.min(2, pixelRatio);
+        const w = Math.round(width * dpr);
+        const h = Math.round(height * dpr);
         if (c.width !== w || c.height !== h) {
           c.width = w;
           c.height = h;
         }
         const fresh = s.pose && performance.now() - s.lastPoseAt < 1500 ? s.pose : null;
+        if (mode === "zonen" && s.lastPoseAt > zonePacket && fresh) {
+          zonePacket = s.lastPoseAt;
+          analysis.update({ t: zonePacket, landmarks: fresh, worldLandmarks: null, aspect: s.aspect });
+        } else if ((mode !== "zonen" || !fresh) && zonePacket >= 0) {
+          zonePacket = -1;
+          analysis.reset();
+        }
         shown = fresh ? lerpPose(shown, fresh, 0.35) : null;
         const now = performance.now();
-        const mode = figureMode(s.state.viewMode);
         if (!shown || mode !== "spur") trail = [];
         else if (now - lastTrail > 90) {
           trail.push(shown);
@@ -115,11 +142,28 @@ export function TvScreen() {
           lastTrail = now;
         }
         const ctx = c.getContext("2d");
-        if (ctx)
-          drawFrame({
+        if (ctx) {
+          const v = { cw: w, ch: h, sw: s.aspect * 1000, sh: 1000, mirror: s.mirror, fit: "contain" as const };
+          const hud = s.state.hud;
+          const received = hud?.arena?.activeMs ?? 0;
+          if (received !== arenaTime) {
+            arenaTime = received;
+            arenaTimeReceived = now;
+          }
+          const running = hud?.stage === "training" && hud.running;
+          const onStage = hasLiveStage(mode, s.state.avatar ?? "lukas");
+          const drawn = onStage && arena.draw(ctx, {
+            v, room: s.state.arenaRoom ?? ARENA_ROOMS[0].id, studioRoom: roomById(s.state.room), mode,
+            pose: shown, mask: null, bodyLoad: hud?.bodyLoad,
+            speeds: mode === "zonen" ? analysis.jointSpeeds() : undefined,
+            demo: s.state.demo, now, running, precision: hud?.lastScore ?? null,
+            activeMs: arenaTime + (running && received > 0 ? Math.min(150, now - arenaTimeReceived) : 0),
+          });
+          if (!onStage) arena.leave(c);
+          if (!drawn) drawFrame({
             ctx,
-            v: { cw: w, ch: h, sw: s.aspect * 1000, sh: 1000, mirror: s.mirror, fit: "contain" },
-            mode,
+            v,
+            mode: mode === "arena" ? "hologramm" : mode,
             room: s.state.room ? roomById(s.state.room) : null,
             avatar: s.state.avatar ? avatarById(s.state.avatar) : null,
             video: null,
@@ -129,11 +173,15 @@ export function TvScreen() {
             bodyLoad: s.state.hud?.bodyLoad ?? null,
             ring: { depth: s.state.hud?.depth ?? null, goodDepth: 0.85, repFlashAt: -1e9, now: performance.now() },
           });
+        }
       }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (arenaCanvas) arena.leave(arenaCanvas);
+    };
   }, [showVideo]);
 
   if (host.status !== "connected") {
@@ -216,13 +264,13 @@ export function TvScreen() {
         >
           <video ref={videoRef} className="tv-video" autoPlay muted playsInline style={{ display: showVideo ? "block" : "none" }} />
           <canvas ref={canvasRef} className="tv-video" aria-hidden="true" style={{ display: showVideo ? "none" : "block" }} />
-          <div className="live live-embedded">
+          <div className={`live live-embedded${st.viewMode === "arena" ? " arena-live" : ""}`}>
             <div className="topbar">
               {st.demo && <span className="chip chip-demo">DEMO</span>}
               <div className="spacer" />
               {st.hud.engineRunning && <QualityChip view={st.hud} />}
             </div>
-            <LiveHud view={st.hud} />
+            <LiveHud view={st.hud} arena={st.viewMode === "arena"} />
             {!showVideo && (
               <p className="tv-hint">
                 Darstellung aus Gelenkpunkten{st.video ? " – Bild wird verbunden …" : " – Kamerabild am Handy nicht freigegeben"}

@@ -3,7 +3,8 @@ import { synthPose } from "@motion-arena/pose-engine";
 import type { Landmark } from "@motion-arena/shared";
 import { MainLayout } from "../components/common";
 import { AVATARS, AVATAR_CATEGORIES, avatarById, drawAvatar, type AvatarCategory, type AvatarDef } from "../render/avatars";
-import { ROOMS, drawRoom, paintRoom, roomById, type RoomDef } from "../render/rooms";
+import { ROOMS, drawRoom, roomById, type RoomDef } from "../render/rooms";
+import { conceptArt, conceptImage, drawCover, roomBackdrop } from "../render/concept-art";
 import { actions, useApp } from "../store";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -54,30 +55,25 @@ function paintAvatar(ctx: CanvasRenderingContext2D, lms: Landmark[], w: number, 
   drawAvatar(ctx, lms, P, (leg(23, 25, 27) + leg(24, 26, 28)) / 2, a);
 }
 
-function AvatarThumb({ avatar }: { avatar: AvatarDef }) {
+function ConceptThumb({ url, room = false }: { url: string; room?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const [loaded, setLoaded] = useState<string | null>(null);
+  useEffect(() => {
+    const image = conceptImage(url);
+    const ready = () => setLoaded(url);
+    if (image.naturalWidth) ready();
+    else image.addEventListener("load", ready);
+    return () => image.removeEventListener("load", ready);
+  }, [url]);
   useCanvasPaint(ref, (c) => {
     const r = prepare(c);
     if (!r) return;
     const { ctx, w, h } = r;
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, "#26383D");
-    g.addColorStop(1, "#141f22");
-    ctx.fillStyle = g;
+    ctx.fillStyle = "#141f22";
     ctx.fillRect(0, 0, w, h);
-    const { landmarks } = synthPose({ view: "front", kneeFlexDeg: 0, arms: "down", aspect: w / h, scale: 0.92, groundY: 0.97 });
-    paintAvatar(ctx, landmarks, w, h, avatar);
-  }, [avatar]);
-  return <canvas ref={ref} className="studio-thumb" aria-hidden="true" />;
-}
-
-function RoomThumb({ room }: { room: RoomDef }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useCanvasPaint(ref, (c) => {
-    const r = prepare(c);
-    if (r) paintRoom(r.ctx, room, r.w, r.h);
-  }, [room]);
-  return <canvas ref={ref} className="studio-thumb room" aria-hidden="true" />;
+    if (loaded === url) drawCover(ctx, conceptImage(url), w, h);
+  }, [url, loaded]);
+  return <canvas ref={ref} className={`studio-thumb${room ? " room" : ""}`} aria-hidden="true" />;
 }
 
 /** Vorschau: gewählter Avatar macht im gewählten Raum ruhige Kniebeugen (bei „Bewegung reduzieren“ still). */
@@ -121,6 +117,8 @@ function Preview({ avatar, room }: { avatar: AvatarDef; room: RoomDef }) {
       restart();
     };
     mq?.addEventListener("change", onMotion);
+    const artwork = conceptImage(roomBackdrop(room.nr));
+    artwork.addEventListener("load", restart);
     // Standbild bei Größenwechsel neu zeichnen (die Animation passt sich ohnehin jedes Bild an)
     const ro = typeof ResizeObserver === "function" ? new ResizeObserver(() => calm && restart()) : null;
     ro?.observe(c);
@@ -128,6 +126,7 @@ function Preview({ avatar, room }: { avatar: AvatarDef; room: RoomDef }) {
     return () => {
       cancelAnimationFrame(raf);
       mq?.removeEventListener("change", onMotion);
+      artwork.removeEventListener("load", restart);
       ro?.disconnect();
     };
   }, [avatar, room]);
@@ -161,9 +160,8 @@ export function StudioScreen() {
             {pad(avatar.nr)} {avatar.name} · {pad(room.nr)} {room.name}
           </p>
           <p className="muted small">
-            Der Avatar folgt im Training live deinen Bewegungen (Ansicht „Avatar“). Der Raum ist der Hintergrund aller
-            Ansichten ohne Kamerabild und reagiert dezent mit Licht auf deine Wiederholungen. Stilisierte 2D-Figuren –
-            kein 3D-Modell.
+            Der gewählte Raum erscheint im Live-Training. Lukas hat ein bewegliches 3D-Modell. Die übrigen Porträts
+            zeigen die Designvorlagen für die Avatare, deren Live-Figuren bisher in 2D animiert werden.
           </p>
           <button className="btn btn-primary" onClick={() => actions.openLive("demo", target, "squat", "avatar")}>
             Demo als Avatar ansehen
@@ -191,7 +189,7 @@ export function StudioScreen() {
               aria-label={`${a.name}, ${a.focus}, Intensität ${a.level} von 5`}
               onClick={() => actions.updateSettings({ avatar: a.id })}
             >
-              <AvatarThumb avatar={a} />
+              <ConceptThumb url={conceptArt("avatars", a.nr)} />
               <span className="studio-name">
                 <small>{pad(a.nr)}</small> {a.name}
               </span>
@@ -217,9 +215,9 @@ export function StudioScreen() {
               className="studio-card"
               aria-pressed={r.id === room.id}
               aria-label={`${r.name}, ${r.focus}`}
-              onClick={() => actions.updateSettings({ room: r.id })}
+              onClick={() => actions.updateSettings({ room: r.id, arenaRoom: "loft" })}
             >
-              <RoomThumb room={r} />
+              <ConceptThumb url={conceptArt("rooms", r.nr)} room />
               <span className="studio-name">
                 <small>{pad(r.nr)}</small> {r.name}
               </span>

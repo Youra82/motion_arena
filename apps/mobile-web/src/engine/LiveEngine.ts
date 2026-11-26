@@ -9,22 +9,27 @@ import {
   type SquatEvent,
 } from "@motion-arena/motion-scoring";
 import { actions, showFeedback, useApp, type EngineError, type Source, type ViewMode } from "../store";
-import { drawFrame } from "../render/draw";
+import { drawFrame, type Viewport } from "../render/draw";
+import { ArenaRenderer } from "../arena/arena-renderer";
+import { activeTimeMs } from "../arena/metrics";
 import { roomById } from "../render/rooms";
+import { hasLiveStage } from "../view-modes";
 import { avatarById } from "../render/avatars";
 import { DemoSource } from "./demo";
 // MediaPipe erst beim Kameratraining laden (Start und Demo bleiben schlank).
 import type { PoseDetector } from "./landmarker";
 import { Recorder } from "./recorder";
-import { attachLiveCanvas, detachLiveCanvas, sendPoseToTv } from "../tv/phone-link";
+import { attachLiveCanvas, detachLiveCanvas, sendPoseToTv, usePhoneLink } from "../tv/phone-link";
 
 const HUD_INTERVAL_MS = 100;
 const COUNTDOWN_S = 3;
 const TRAIL_SAMPLE_MS = 90;
 const TRAIL_LEN = 10;
+const DEMO_STEP_MS = 33;
+const DEMO_CATCH_UP_MS = 220;
 const CANCELLED = Symbol("cancelled");
 /** Ansichten, die die Personenmaske brauchen (kostet Rechenzeit, daher nur dann). */
-const needsMask = (m: ViewMode) => m === "silhouette" || m === "hologramm";
+const needsMask = (m: ViewMode) => m === "silhouette" || m === "hybrid" || m === "arena";
 
 /**
  * Verbindet Quelle (Kamera oder Demo) → Pose-Erkennung → Merkmale → Kalibrierung/Zähler → Store,
@@ -56,9 +61,11 @@ export class LiveEngine {
   private lastTrail = 0;
   private fpsFrames: number[] = [];
   private mask: HTMLCanvasElement | null = null;
+  private readonly arena = new ArenaRenderer();
   readonly recorder = new Recorder();
   private unsubscribe: (() => void) | null = null;
   private lastVideoTime = -1;
+  private lastDemoFrame: number | null = null;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -180,12 +187,23 @@ export class LiveEngine {
     if (own && this.video.srcObject === own) this.video.srcObject = null;
     this.detector?.close();
     this.detector = null;
+    this.arena.leave(this.canvas);
   }
 
   private loop = (): void => {
     if (this.stopped) return;
     try {
-      this.tick(performance.now());
+      const now = performance.now();
+      if (this.demo && useApp.getState().liveMode === "squat") {
+        // Demo-Posen sind deterministisch. Wenn der Grafiktreiber einen Anzeigetakt
+        // verzögert, erhält der Zähler die fehlenden synthetischen Zwischenposen.
+        if (this.lastDemoFrame !== null) {
+          const from = Math.max(this.lastDemoFrame + DEMO_STEP_MS, now - DEMO_CATCH_UP_MS);
+          for (let t = from; t < now - DEMO_STEP_MS / 2; t += DEMO_STEP_MS) this.tick(t, false);
+        }
+        this.lastDemoFrame = now;
+      }
+      this.tick(now);
     } catch (e) {
       this.fail({ kind: "unknown", message: `Fehler in der Bewegungserkennung: ${String(e)}` });
       return;
@@ -198,7 +216,7 @@ export class LiveEngine {
     }
   };
 
-  private tick(now: number): void {
+  private tick(now: number, draw = true): void {
     let landmarks: Landmark[] | null = null;
     let worldLandmarks: Landmark[] | null = null;
     let aspect = 9 / 16;
@@ -237,7 +255,7 @@ export class LiveEngine {
     };
     const features = extractSquatFeatures(smooth);
     // Mit dem TV gekoppelt? Dann Gelenkpunkte (keine Bilder) weitergeben.
-    sendPoseToTv(smooth.landmarks, aspect, this.source === "camera" ? this.mirror : true, now);
+    if (draw) sendPoseToTv(smooth.landmarks, aspect, this.source === "camera" ? this.mirror : true, now);
     const state = useApp.getState();
 
     let depth: number | null = null;
@@ -291,6 +309,7 @@ export class LiveEngine {
       }
     }
 
+    if (!draw) return;
     // Bewegungsspur nur pflegen, wenn sie angezeigt wird.
     if (state.viewMode !== "spur") this.trail = [];
     else if (landmarks && now - this.lastTrail > TRAIL_SAMPLE_MS && smooth.landmarks) {
@@ -311,19 +330,29 @@ export class LiveEngine {
 
     const ctx = this.canvas.getContext("2d");
     if (ctx) {
+      const v: Viewport = {
+        cw: this.canvas.width,
+        ch: this.canvas.height,
+        sw: this.source === "camera" ? this.video.videoWidth || 1280 : 900,
+        sh: this.source === "camera" ? this.video.videoHeight || 720 : 1600,
+        mirror: this.source === "camera" ? this.mirror : true,
+        fit: "contain",
+      };
+      if (hasLiveStage(state.viewMode, state.settings.avatar)) {
+        const session = useApp.getState().session;
+        if (this.arena.draw(ctx, {
+          v, room: state.settings.arenaRoom, studioRoom: roomById(state.settings.room), mode: state.viewMode,
+          pose: smooth.landmarks, worldPose: smooth.worldLandmarks, bodyLoad: this.lastBodyLoad,
+          speeds: wantsBodyLoad ? this.bodyLoad.jointSpeeds() : undefined, mask: this.mask, kneeAngle: features.kneeAngle,
+          demo: this.source === "demo", now, activeMs: activeTimeMs(session, now),
+          running: session.status === "running", precision: session.reps.at(-1)?.score.total ?? null,
+          capture: usePhoneLink.getState().streaming,
+        })) return;
+      } else this.arena.leave(this.canvas);
       drawFrame({
         ctx,
-        v: {
-          cw: this.canvas.width,
-          ch: this.canvas.height,
-          sw: this.source === "camera" ? this.video.videoWidth || 1280 : 900,
-          sh: this.source === "camera" ? this.video.videoHeight || 720 : 1600,
-          // Kamera: Selfie-Spiegelung (nur Frontkamera); Demo ebenfalls gespiegelt, damit links = links wie im Körperschema.
-          mirror: this.source === "camera" ? this.mirror : true,
-          // Ganzes ausgewertetes Bild zeigen (contain), damit sichtbar = erkannt – auch im Querformat.
-          fit: "contain",
-        },
-        mode: state.viewMode,
+        v,
+        mode: state.viewMode === "arena" ? "hologramm" : state.viewMode,
         room: roomById(state.settings.room),
         avatar: avatarById(state.settings.avatar),
         video: this.source === "camera" ? this.video : null,

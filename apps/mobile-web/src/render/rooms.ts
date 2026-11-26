@@ -1,8 +1,9 @@
 /**
- * 20 Trainingsräume (docs/FEATURES.md) – eigenständig, prozedural gezeichnet (keine fremden Bilder/Assets).
- * Statische Szene wird je Raum und Größe einmal vorgerendert; pro Bild kommt nur die dezente Raumbeleuchtung dazu
- * (Designsignatur „Dynamische Raumbeleuchtung“: zurückhaltende Reaktion auf Trainingsphasen).
+ * Die 20 Trainingsräume teilen ihre Motive mit dem Studio-Katalog. Während ein Motiv lädt oder offline noch nicht
+ * vorliegt, zeichnet Canvas eine lokale Ersatzkulisse. Die Lichtreaktion folgt den Trainingsphasen.
  */
+import { conceptImage, drawCover, roomBackdrop } from "./concept-art";
+
 export type SceneKind =
   | "studio"
   | "mountains"
@@ -812,9 +813,11 @@ export function roomCanvas(r: RoomDef, w: number, h: number): HTMLCanvasElement 
  * bleibt ruhig, das Licht hebt nur den Boden um die Person leicht an.
  */
 export function drawRoom(ctx: C, r: RoomDef, w: number, h: number, light = 0): void {
-  ctx.drawImage(roomCanvas(r, w, h), 0, 0, w, h);
+  const artwork = typeof Image === "function" ? conceptImage(roomBackdrop(r.nr)) : null;
+  if (artwork?.naturalWidth) drawCover(ctx, artwork, w, h);
+  else ctx.drawImage(roomCanvas(r, w, h), 0, 0, w, h);
   // Lesbarkeit der Figur: Raum leicht abdunkeln (Figur und HUD bleiben im Vordergrund)
-  ctx.fillStyle = "rgba(8,14,16,0.28)";
+  ctx.fillStyle = artwork?.naturalWidth ? "rgba(8,14,16,0.12)" : "rgba(8,14,16,0.28)";
   ctx.fillRect(0, 0, w, h);
   if (light > 0.01) {
     const y = h * (HORIZON + (1 - HORIZON) * 0.45);

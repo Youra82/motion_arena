@@ -5,6 +5,10 @@ import { LiveHud, QualityChip } from "../components/LiveHud";
 import { hudViewFrom } from "../components/hud-view";
 import { TvVideoConsent } from "../components/TvLink";
 import { usePhoneLink } from "../tv/phone-link";
+import { arenaDpr } from "../arena/arena-renderer";
+import { ARENA_ROOMS, isArenaRoom } from "../arena/rooms";
+import { ROOMS, isRoomId } from "../render/rooms";
+import { hasLiveStage } from "../view-modes";
 
 export function LiveScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -26,22 +30,39 @@ export function LiveScreen() {
   const recording = useApp((s) => s.recording);
   const recordedFrames = useApp((s) => s.recordedFrames);
   const liveMode = useApp((s) => s.liveMode);
+  const arenaRoom = useApp((s) => s.settings.arenaRoom);
+  const studioRoom = useApp((s) => s.settings.room);
+  const avatar = useApp((s) => s.settings.avatar);
+  const arena = viewMode === "arena" && liveMode === "squat";
 
   useEffect(() => {
     const canvas = canvasRef.current!;
     const resize = () => {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      canvas.width = Math.round(canvas.clientWidth * dpr);
-      canvas.height = Math.round(canvas.clientHeight * dpr);
+      const { clientWidth, clientHeight } = canvas;
+      const pixelRatio = window.devicePixelRatio || 1;
+      const current = useApp.getState();
+      const dpr = hasLiveStage(current.viewMode, current.settings.avatar)
+        ? arenaDpr(clientWidth, clientHeight, pixelRatio)
+        : Math.min(2, pixelRatio);
+      const w = Math.round(clientWidth * dpr);
+      const h = Math.round(clientHeight * dpr);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
     };
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
+    const unsubscribe = useApp.subscribe((s, prev) => {
+      if (s.viewMode !== prev.viewMode) resize();
+    });
     const engine = new LiveEngine(canvas, videoRef.current!, source);
     engineRef.current = engine;
     void engine.start();
     return () => {
       ro.disconnect();
+      unsubscribe();
       engine.stop();
       engineRef.current = null;
     };
@@ -68,7 +89,7 @@ export function LiveScreen() {
   const tvStreaming = usePhoneLink((s) => s.streaming);
 
   return (
-    <div className="live">
+    <div className={`live${arena ? " arena-live" : ""}`}>
       <video ref={videoRef} playsInline muted />
       <canvas ref={canvasRef} aria-label="Live-Ansicht mit Körpererkennung" />
 
@@ -85,7 +106,7 @@ export function LiveScreen() {
         )}
         <div className="spacer" />
         {engineStatus === "running" && <QualityChip view={view} />}
-        {engineStatus === "running" && <span className="chip muted">{hud.fps} fps</span>}
+        {engineStatus === "running" && <span className="chip muted" title="Bilder pro Sekunde der Körpererkennung">{hud.fps} fps</span>}
       </div>
 
       <div className="live-consent">
@@ -94,6 +115,7 @@ export function LiveScreen() {
 
       <LiveHud
         view={view}
+        arena={arena}
         bannerAction={
           <button className="btn btn-ghost" style={{ marginTop: 8, minHeight: 40 }} onClick={() => actions.recalibrate(now())}>
             Neu kalibrieren
@@ -157,7 +179,7 @@ export function LiveScreen() {
 
       <div className="bottombar">
         <div className="modes" role="group" aria-label="Darstellung">
-          {VIEW_MODES.map((m) => {
+          {VIEW_MODES.filter((m) => liveMode === "squat" || m.id !== "arena").map((m) => {
             const unavailable = m.needsCamera && source === "demo";
             return (
               <button
@@ -168,12 +190,26 @@ export function LiveScreen() {
                 onClick={() => actions.setViewMode(m.id)}
               >
                 {m.label}
-                {m.id === "avatar" ? " (Platzhalter)" : ""}
               </button>
             );
           })}
         </div>
         <div className="controls">
+          {hasLiveStage(viewMode, avatar) && (
+            <select
+              className="arena-room-select"
+              aria-label="Arena-Raum"
+              value={arenaRoom === "lebombo" ? arenaRoom : studioRoom}
+              onChange={(event) => {
+                const room = event.currentTarget.value;
+                if (isRoomId(room)) actions.updateSettings({ room, arenaRoom: "loft" });
+                else if (isArenaRoom(room)) actions.updateSettings({ arenaRoom: room });
+              }}
+            >
+              {ROOMS.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
+              {ARENA_ROOMS.filter(({ id }) => id !== "loft").map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
+            </select>
+          )}
           {stage === "training" && running && (
             <button className="btn" onClick={() => actions.pause(now())}>
               ❚❚ Pause

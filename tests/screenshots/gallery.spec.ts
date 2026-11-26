@@ -64,6 +64,7 @@ test.describe("Demo-Ablauf", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "15", exact: true }).click();
     await page.getByRole("button", { name: "Demo ohne Kamera ansehen" }).first().click();
+    await view(page, "Skelett");
     await expect(page.getByText("Kalibrierung")).toBeVisible();
     await page.waitForTimeout(900);
     await shot(page, "03-kalibrierung");
@@ -91,15 +92,15 @@ test.describe("Demo-Ablauf", () => {
     }
     await view(page, "Skelett");
 
-    // Die Demo macht jede 5. Kniebeuge absichtlich zu flach
-    await expect(page.locator(".toast", { hasText: "Zu flach" })).toBeVisible({ timeout: 30_000 });
-    await settle(page);
-    await shot(page, "09-feedback-zu-flach");
-
-    // Nach ca. 25 s verschwindet die Demo-Person kurz → Warnung statt Wertung
-    await expect(page.locator(".banner")).toBeVisible({ timeout: 30_000 });
+    // Die Demo-Person verschwindet zwischendurch kurz → Warnung statt Wertung
+    await expect(page.locator(".banner")).toBeVisible({ timeout: 60_000 });
     await settle(page);
     await shot(page, "10-warnung-keine-person");
+
+    // Die Demo macht jede 5. Kniebeuge absichtlich zu flach
+    await expect(page.locator(".toast", { hasText: "Zu flach" })).toBeVisible({ timeout: 60_000 });
+    await settle(page);
+    await shot(page, "09-feedback-zu-flach");
 
     await page.getByRole("button", { name: "❚❚ Pause" }).click();
     await expect(page.getByRole("heading", { name: "Pausiert" })).toBeVisible();
@@ -113,6 +114,7 @@ test.describe("Demo-Ablauf", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "5", exact: true }).click();
     await page.getByRole("button", { name: "Demo ohne Kamera ansehen" }).first().click();
+    await view(page, "Skelett");
     await expect(page.locator(".toast", { hasText: "Ziel erreicht" })).toBeVisible({ timeout: 60_000 });
     await settle(page);
     await shot(page, "13-ziel-erreicht-live");
@@ -136,6 +138,7 @@ test.describe("Demo-Ablauf", () => {
     const page = await ctx.newPage();
     await page.goto("/");
     await page.getByRole("button", { name: "Demo ohne Kamera ansehen" }).first().click();
+    await view(page, "Skelett");
     await expect(page.locator(".toast.good")).toBeVisible({ timeout: 25_000 });
     await settle(page);
     await shot(page, "15-querformat-training");

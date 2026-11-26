@@ -29,8 +29,10 @@ Stand: 26.11.2026. Gebaut von Claude Code, geprüft in fünf Runden von Codex (`
 | **Avatare & Räume:** 15 Avatare, 20 Räume, Einstellungen (alt/manipuliert), fehlende/ungültige Punkte, kollabierte Pose, Raum-Cache, Auswahlseite, Größenwechsel, reduzierte Bewegung, TV zeigt Raum/Avatar | Vitest + Playwright (Codex-Runde 5) | grün |
 | Typprüfung strikt, Produktions-Build (Hauptbündel 377 kB, Körpererkennung lädt erst beim Kameratraining) | `tsc -b`, `vite build` | grün |
 
-Gesamt: **235 Vitest-Tests grün** (eigene + Codex-Tests aus 5 Runden), 1 Aufnahme-Suite wartet auf echte Daten;
-**30 Playwright-Tests grün**.
+| **3D-Arena:** Start ohne Konsolenfehler, Demo-Wertung, Raumwechsel, Laufzeit-Cache, TV ohne Bildfreigabe; Figuren stehen in allen 20 Räumen auf dem Boden (Standhöhe je Raumbild, Waterfall mit Plattform) | Vitest + Playwright + Sichtprüfung aller 20 Räume (`docs/screenshots/51-arena-20-raeume.jpg`) | grün |
+
+Gesamt: **242 Vitest-Tests grün** (eigene + Codex-Tests aus 5 Runden), 1 Aufnahme-Suite wartet auf echte Daten;
+**34 Playwright-Tests grün**.
 
 ## Noch NICHT getestet (vor Freigabe nötig)
 
@@ -58,8 +60,7 @@ Gesamt: **235 Vitest-Tests grün** (eigene + Codex-Tests aus 5 Runden), 1 Aufnah
 - Eine Kamera misst **keine** Muskelkraft, Gelenkbelastung oder Verletzungsrisiko. Bewertung und Körperanalyse sind
   schematische Schätzungen; die Körperanalyse nennt eine **vermutete** Bewegung und Beanspruchung, sonst „unbekannt“.
 - Frontal ist der Kniewinkel nur über MediaPipe-Weltkoordinaten bestimmbar. Am genauesten: leicht schräg oder seitlich.
-- **Avatare und Räume** sind stilisierte 2D-Zeichnungen (eigenständig gestaltet, ohne Gesichter), kein riggbares
-  3D-Modell. Ohne Bildfreigabe zeigt der Fernseher Kamera-Ansichten (Echtbild, Hybrid, Silhouette) als Skelett.
+- **3D-Figuren:** animiert ist bisher nur Trainer Lukas (CC0-Grundmodell); die übrigen Avatare sind Porträtkarten. Ohne Bildfreigabe zeigt der Fernseher Kamera-Ansichten (Echtbild, Hybrid, Silhouette) als Skelett.
 - Nur die Übung Kniebeuge wird gezählt und bewertet.
 - Der Verlauf hält höchstens 1000 Trainings; Kennzahlen beziehen sich auf den gespeicherten Verlauf.
 

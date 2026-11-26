@@ -78,6 +78,7 @@ export function tvStateFrom(s: AppState): TvState {
       : null,
     room: s.settings.room,
     avatar: s.settings.avatar,
+    arenaRoom: s.settings.arenaRoom,
   };
 }
 

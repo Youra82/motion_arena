@@ -34,7 +34,7 @@ test("TV zeigt dasselbe wie das Handy: koppeln, Zustimmung, Training, Ergebnis",
   await expect(phoneReps).toContainText(/^1/, { timeout: 20_000 });
   await expect(tvReps).toContainText(/^1/, { timeout: 5_000 });
   await expect(tv.locator(".tv-stage .hud-points")).toHaveText((await phone.locator(".hud-points").textContent())!, { timeout: 3_000 });
-  await expect(tv.locator(".tv-stage .toast")).toBeVisible();
+  await expect(tv.locator(".tv-stage .arena-feedback")).toBeVisible();
   await expect(tv.locator(".tv-stage .chip-demo")).toBeVisible();
   await tv.screenshot({ path: "tests/e2e/.results/screens/14-tv-spiegelung.png" });
 

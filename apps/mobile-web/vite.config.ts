@@ -45,8 +45,8 @@ function cspPlugin(): Plugin {
   };
 }
 
-/** Großes Zusatzmodell wird nicht vorab geladen, sondern erst bei Nutzung zwischengespeichert. */
-const NOT_PRECACHED = [/pose_landmarker_full\.task$/];
+/** Zusatzmodell und Arena werden beim ersten Aufruf geladen und zwischengespeichert. */
+const NOT_PRECACHED = [/pose_landmarker_full\.task$/, /^arena\//, /^assets\/arena-three-/];
 
 /**
  * Service Worker für Installation und Offline-Betrieb. Nach dem Build wird `sw.js` mit der
@@ -74,7 +74,10 @@ function serviceWorkerPlugin(): Plugin {
         .filter((f) => f !== "sw.js" && !NOT_PRECACHED.some((r) => r.test(f)))
         .sort();
       const hash = createHash("sha256");
-      for (const f of precache) hash.update(f).update(String(statSync(join(outDir, f)).size));
+      // Auch ungehashte Arena-Dateien im Laufzeitcache müssen bei Änderungen ausgetauscht werden.
+      for (const f of files.filter((f) => f !== "sw.js").sort()) {
+        hash.update(f).update(NOT_PRECACHED.some((r) => r.test(f)) ? readFileSync(join(outDir, f)) : String(statSync(join(outDir, f)).size));
+      }
       const version = hash.digest("hex").slice(0, 12);
       const list = ["./", ...precache.filter((f) => f !== "index.html").map((f) => `./${f}`)];
       writeFileSync(join(outDir, "sw.js"), swSource(version, list));
@@ -118,19 +121,18 @@ self.addEventListener("fetch", (event) => {
   // Dateien: aus dem Speicher, sonst laden und für später ablegen (z. B. das große Modell).
   // ignoreVary: Module/CSS werden mit "crossorigin" (Origin-Header) angefragt, der Server antwortet
   // mit "Vary: Origin" – ohne ignoreVary würde der gespeicherte Eintrag offline nicht gefunden.
-  event.respondWith(
-    caches.match(req, { ignoreVary: true }).then(
-      (hit) =>
-        hit ||
-        fetch(req).then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
-          }
-          return res;
-        }),
-    ),
-  );
+  let stored;
+  const response = caches.match(req, { ignoreVary: true }).then(async (hit) => {
+    if (hit) return hit;
+    const res = await fetch(req);
+    if (res.ok) {
+      const copy = res.clone();
+      stored = caches.open(CACHE).then((c) => c.put(req, copy));
+    }
+    return res;
+  });
+  event.respondWith(response);
+  event.waitUntil(response.then(() => stored).catch(() => {}));
 });
 `;
 }

@@ -1,5 +1,7 @@
 import type { Landmark } from "@motion-arena/shared";
 import type { HudView } from "../components/hud-view";
+import { CHECK_KEYS } from "../arena/metrics";
+import { isArenaRoom, type ArenaRoom } from "../arena/rooms";
 
 /**
  * Datenprotokoll Handy → TV (Datenkanal): Gelenkpunkte und Anzeigewerte. Das Live-Bild (ggf. mit Kamerabild)
@@ -12,6 +14,7 @@ export interface TvState {
   /** Welche Handy-Ansicht gerade aktiv ist. */
   screen: "idle" | "live" | "result";
   hud: HudView | null;
+  arenaRoom?: ArenaRoom;
   /** Größe der Handy-Ansicht (CSS-Pixel) – der TV zeigt sie im gleichen Seitenverhältnis. */
   viewport: { w: number; h: number };
   viewMode: string;
@@ -164,6 +167,7 @@ function isHud(v: unknown): boolean {
   if (!isObj(v)) return false;
   const fb = v.feedback;
   const calib = v.calib;
+  const arena = v.arena;
   return (
     oneOf(v.stage, ["calibrating", "countdown", "training", "analysis"] as const) &&
     bool(v.engineRunning) &&
@@ -183,8 +187,16 @@ function isHud(v: unknown): boolean {
     bool(v.bannerRecalibrate) &&
     (calib === null || (isObj(calib) && num(calib.progress, 0, 1) && str(calib.message, 200))) &&
     int(v.countdown, 0, 60) &&
-    bool(v.countdownHold)
+    bool(v.countdownHold) &&
+    (arena === undefined || (
+      isObj(arena) && int(arena.activeMs, 0, 1e9) && num(arena.kcal, 0, 1e6) &&
+      isArenaChecks(arena.checks)
+    ))
   );
+}
+
+function isArenaChecks(checks: unknown): boolean {
+  return isObj(checks) && CHECK_KEYS.every((key) => oneOf(checks[key], ["good", "improve", "unknown"] as const));
 }
 
 function isSummary(v: unknown): boolean {
@@ -213,6 +225,7 @@ export function isTvState(v: unknown): v is TvState {
     bool(v.demo) &&
     isHud(v.hud) &&
     isSummary(v.summary) &&
+    (v.arenaRoom === undefined || isArenaRoom(v.arenaRoom)) &&
     (v.room === undefined || str(v.room, 40)) &&
     (v.avatar === undefined || str(v.avatar, 40))
   );

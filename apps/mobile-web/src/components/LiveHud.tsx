@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DEFAULT_SQUAT_OPTIONS } from "@motion-arena/motion-scoring";
 import { BodyDiagram } from "./BodyDiagram";
+import { ArenaHud } from "./ArenaHud";
 import type { HudView } from "./hud-view";
 
 const QUALITY_LABEL: Record<HudView["quality"], [string, string]> = {
@@ -64,14 +65,15 @@ function ProgressRing({ value }: { value: number }) {
  * Wird am Handy UND am Fernseher mit denselben Daten gerendert – deshalb sieht beides gleich aus.
  * Bedienelemente (Knöpfe) liegen außerhalb, nur am Handy.
  */
-export function LiveHud({ view, bannerAction }: { view: HudView; bannerAction?: React.ReactNode }) {
+export function LiveHud({ view, bannerAction, arena = false }: { view: HudView; bannerAction?: React.ReactNode; arena?: boolean }) {
   const depthPct = view.depth === null ? 0 : Math.min(100, Math.max(0, (view.depth / 1.2) * 100));
   const goodPct = (DEFAULT_SQUAT_OPTIONS.goodDepth / 1.2) * 100;
   const countPct = (DEFAULT_SQUAT_OPTIONS.minCountDepth / 1.2) * 100;
   const bl = view.bodyLoad;
   return (
     <>
-      {view.stage === "training" && (
+      {arena && <ArenaHud view={view} />}
+      {!arena && view.stage === "training" && (
         <>
           <div className="hud" aria-live="polite">
             <span className="hud-label">Wiederholungen</span>
@@ -116,7 +118,7 @@ export function LiveHud({ view, bannerAction }: { view: HudView; bannerAction?: 
         </>
       )}
 
-      {view.feedback && (
+      {view.feedback && !(arena && view.feedback.tone === "good") && (
         <div key={view.feedback.id} className={`toast ${view.feedback.tone}`} role="status">
           {view.feedback.text}
         </div>

@@ -13,7 +13,7 @@ import {
   type BodyLoadResult,
   type TrainingEntry,
 } from "@motion-arena/motion-scoring";
-import { clearAll, loadHistory, loadSettings, saveHistory, saveSettings, type Settings } from "./persist";
+import { DEFAULT_SETTINGS, clearAll, loadHistory, loadSettings, saveHistory, saveSettings, type Settings } from "./persist";
 
 /** Hauptbereiche (untere Navigation) plus Live-Training und Ergebnis. */
 export type Screen = "home" | "training" | "progress" | "profile" | "studio" | "live" | "result" | "tv";
@@ -148,7 +148,7 @@ export const actions = {
       feedback: null,
       session: createSession(targetReps),
       // Kameratraining startet immer mit der gespeicherten Standard-Ansicht (Analyse/Demo überschreiben sie nicht).
-      viewMode: view ?? (liveMode === "analysis" ? "muskel" : source === "demo" ? "skelett" : s.settings.defaultView),
+      viewMode: view ?? (liveMode === "analysis" ? "muskel" : source === "demo" ? DEFAULT_SETTINGS.defaultView : s.settings.defaultView),
     }));
   },
   setViewMode(viewMode: ViewMode) {

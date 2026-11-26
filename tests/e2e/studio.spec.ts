@@ -51,6 +51,6 @@ test("Avatar und Raum wählen, nach Neuladen erhalten, Demo zeigt den Avatar im 
   await page.getByRole("button", { name: "Training beenden" }).click();
   await page.getByRole("button", { name: "Zur Startseite" }).click();
   await page.getByRole("button", { name: "Profil" }).click();
-  await expect(page.getByRole("button", { name: "Hybrid" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Arena", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect(errors).toEqual([]);
 });

@@ -5,6 +5,10 @@ types-out/
 apps/mobile-web/public/mediapipe/
 apps/mobile-web/public/models/
 
+# Lokale CC0-Originale. Die optimierten Arena-Dateien liegen unter public/arena/.
+/assets-src/cc0/*.hdr
+/assets-src/cc0/*.glb
+
 .vite/
 tests/e2e/.results/
 playwright-report/
@@ -12,3 +16,6 @@ playwright-report/
 # Rohe Codex-Sitzungsmitschnitte (enthalten lokale Pfade)
 docs/reviews/*.log
 tests/screenshots/.results/
+# Lokale Modell-Versuche (Rekonstruktion, Generator-Exporte) und Sicherungen – nicht ins öffentliche Repo
+/assets-src/lukas-reconstruction/
+/assets-src/*.glb

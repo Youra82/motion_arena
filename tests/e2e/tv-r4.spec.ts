@@ -20,11 +20,12 @@ test("Lokale Kopplung überträgt Live-Werte, Analyse, Demo-Kennzeichnung und Ho
   const tv = await context.newPage();
   const code = await openTv(tv);
   await join(phone, code);
+  await phone.bringToFront();
   await phone.getByRole("button", { name: "Nein, nur Figur ohne Kamerabild" }).click();
   await phone.getByRole("button", { name: "Demo ohne Kamera ansehen" }).click();
   await expect(tv.locator(".tv-stage .chip-demo")).toHaveText("DEMO");
   await expect(tv.getByText(/Kamerabild am Handy nicht freigegeben/)).toBeVisible();
-  await expect(tv.locator(".tv-stage canvas")).toBeVisible();
+  await expect(tv.locator(".tv-stage canvas.tv-video")).toBeVisible();
   await expect(tv.locator(".tv-stage video")).toBeHidden();
   await expect(tv.locator(".hud-reps")).toHaveText(/^1\s*\//, { timeout: 20000 });
   await expect(tv.locator(".hud-points")).toHaveText((await phone.locator(".hud-points").innerText()));

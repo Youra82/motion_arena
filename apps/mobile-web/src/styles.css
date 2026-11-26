@@ -996,8 +996,18 @@ button:disabled {
 }
 
 /* ---------- Live-Körperanalyse ---------- */
+.analysis-hud {
+  max-width: min(54vw, 320px);
+  padding: 10px 13px;
+  border: 1px solid #c4d9df26;
+  border-left: 3px solid var(--primary);
+  border-radius: var(--r-md);
+  background: linear-gradient(130deg, #102127f0, #0b151bd9);
+  box-shadow: 0 12px 25px #0005;
+}
+
 .analysis-movement {
-  font-size: 30px;
+  font-size: clamp(19px, 3vw, 30px);
   font-weight: 800;
   line-height: 1.1;
 }
@@ -1087,10 +1097,15 @@ button:disabled {
   left: var(--s4);
   right: var(--s4);
   bottom: calc(128px + env(safe-area-inset-bottom));
-  margin: 0;
+  width: fit-content;
+  max-width: min(680px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 5px 11px;
+  border-radius: var(--r-sm);
+  background: #101a1dd9;
   font-size: 11px;
   line-height: 1.35;
-  color: var(--muted);
+  color: #edf3f2;
   text-align: center;
 }
 
@@ -1501,7 +1516,7 @@ h1[tabindex="-1"]:focus {
   display: block;
 }
 .studio-thumb.room {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 9;
 }
 .studio-name {
   font-weight: 700;
