@@ -73,3 +73,21 @@ test("Silhouette zeigt die Person (GPU-Maske), ohne WebGL-Lesefehler", async ({ 
   expect(glErrors).toEqual([]);
   await browser.close();
 });
+
+test("Körperanalyse mit Personenbild (Krieger-II-Haltung): Ausfallschritt, vorderes rechtes Bein hoch", async ({ baseURL }) => {
+  const browser = await chromium.launch({
+    channel: "chrome",
+    args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", `--use-file-for-fake-video-capture=${y4m}`],
+  });
+  const ctx = await browser.newContext({ permissions: ["camera"], viewport: { width: 390, height: 844 } });
+  const page = await ctx.newPage();
+  await page.goto(baseURL!);
+  await page.getByRole("button", { name: "Analyse starten" }).first().click();
+  await expect(page.getByText("Erkennung gut")).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator(".analysis-movement")).toHaveText("Ausfallschritt", { timeout: 10_000 });
+  const zone = (name: string) => page.locator(".body-diagram path title", { hasText: name });
+  await expect(zone("Oberschenkel rechts")).toHaveText(/hoch/);
+  await expect(zone("Wade links")).toHaveText(/gering/);
+  await page.screenshot({ path: "tests/e2e/.results/screens/12-analyse-person.png" });
+  await browser.close();
+});

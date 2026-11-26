@@ -1,0 +1,5 @@
+Der [Review-Bericht](/D:/botprojekte/motion_arena/docs/reviews/codex-review-3.md) ist fertig. Er enthält nach Schwere sortierte Befunde mit Datei, Zeile, Szenario und Korrekturvorschlag. Besonders relevant sind der mögliche Startseitenabsturz bei beschädigtem Verlauf, zu sichere Aussagen der Live-Körperanalyse und die pauschalen Datenschutzhinweise bei aktiver TV-Kopplung.
+
+Fünf neue Testdateien enthalten 46 Fälle. `pnpm test` ergab 137 bestandene Tests und 22 absichtlich rote, mit `CODEX-BEFUND` markierte Tests. Die Kalenderfälle liefen in `Europe/Berlin` und `America/Los_Angeles`. `pnpm typecheck` war erfolgreich.
+
+Ich habe nur die fünf Testdateien und den Bericht hinzugefügt. Build und E2E habe ich ausgelassen. Netzwerkverhalten, Screenreader-Ausgabe und Leistung auf Mobilgeräten wurden anhand des Codes beurteilt.

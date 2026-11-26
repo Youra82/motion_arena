@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { readdirSync, statSync, writeFileSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
@@ -15,7 +16,8 @@ function csp(dev: boolean): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'wasm-unsafe-eval'${dev ? " 'unsafe-inline'" : ""}`,
-    `connect-src 'self'${dev ? " ws: wss:" : ""}`,
+    // 0.peerjs.com: nur Verbindungsaufnahme für den TV-Modus (siehe src/tv/transport.ts)
+    `connect-src 'self' https://0.peerjs.com wss://0.peerjs.com${dev ? " ws: wss:" : ""}`,
     "img-src 'self' data: blob:",
     "media-src 'self' blob: mediastream:",
     "worker-src 'self' blob:",
@@ -133,11 +135,30 @@ self.addEventListener("fetch", (event) => {
 `;
 }
 
+/** Versionsangabe für die Startseite: Nummer aus package.json + Kurzkennung des Commits. */
+function buildInfo(): { version: string; commit: string } {
+  const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string };
+  let commit = process.env.GITHUB_SHA?.slice(0, 7) ?? "";
+  if (!commit) {
+    try {
+      commit = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+    } catch {
+      commit = "lokal";
+    }
+  }
+  return { version: pkg.version, commit };
+}
+
 // "phone"-Modus: HTTPS mit selbstsigniertem Zertifikat, damit die Kamera auf dem
 // Smartphone im LAN freigegeben wird (getUserMedia braucht HTTPS außer auf localhost).
 // BASE_PATH: Unterpfad beim Hosting, z. B. "/motion_arena/" für GitHub Pages.
+const info = buildInfo();
 export default defineConfig(({ mode }) => ({
   base: process.env.BASE_PATH ?? "/",
+  define: {
+    __APP_VERSION__: JSON.stringify(info.version),
+    __APP_COMMIT__: JSON.stringify(info.commit),
+  },
   plugins: [react(), cspPlugin(), serviceWorkerPlugin(), ...(mode === "phone" ? [basicSsl()] : [])],
   server: { port: 5173 },
 }));

@@ -1,23 +1,10 @@
 import { useEffect, useRef } from "react";
-import { DEFAULT_SQUAT_OPTIONS } from "@motion-arena/motion-scoring";
-import type { TrackingQuality } from "@motion-arena/shared";
 import { LiveEngine } from "../engine/LiveEngine";
 import { VIEW_MODES, actions, useApp } from "../store";
-
-const QUALITY_LABEL: Record<TrackingQuality["status"], [string, string]> = {
-  ok: ["Erkennung gut", "var(--success)"],
-  "low-confidence": ["Erkennung unsicher", "var(--warning)"],
-  partial: ["Teilkörper", "var(--warning)"],
-  "no-person": ["Keine Person", "var(--error)"],
-};
-
-const PHASE_LABEL = { standing: "Bereit", descending: "Runter", ascending: "Hoch", uncertain: "Unsicher" } as const;
-
-function qualityHint(q: TrackingQuality): string {
-  if (q.status === "no-person") return "Keine Person erkannt – stell dich ins Bild. Es wird nichts gewertet.";
-  if (q.status === "partial") return `Nicht sichtbar: ${q.missing.join(", ")} – keine Wertung, bis alles im Bild ist.`;
-  return "Erkennung unsicher – mehr Licht oder etwas Abstand. Keine Wertung.";
-}
+import { LiveHud, QualityChip } from "../components/LiveHud";
+import { hudViewFrom } from "../components/hud-view";
+import { TvVideoConsent } from "../components/TvLink";
+import { usePhoneLink } from "../tv/phone-link";
 
 export function LiveScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,6 +25,7 @@ export function LiveScreen() {
   const feedback = useApp((s) => s.feedback);
   const recording = useApp((s) => s.recording);
   const recordedFrames = useApp((s) => s.recordedFrames);
+  const liveMode = useApp((s) => s.liveMode);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -62,11 +50,8 @@ export function LiveScreen() {
   const now = () => performance.now();
   const running = session.status === "running";
   const paused = session.status === "paused";
-  const q = QUALITY_LABEL[hud.quality.status];
-  const depthPct = hud.depth === null ? 0 : Math.min(100, Math.max(0, (hud.depth / 1.2) * 100));
-  const goodPct = (DEFAULT_SQUAT_OPTIONS.goodDepth / 1.2) * 100;
-  const countPct = (DEFAULT_SQUAT_OPTIONS.minCountDepth / 1.2) * 100;
-  const lastRep = session.reps[session.reps.length - 1];
+  const appState = useApp();
+  const view = hudViewFrom(appState);
 
   const toggleRecording = () => {
     const eng = engineRef.current;
@@ -79,91 +64,42 @@ export function LiveScreen() {
     }
   };
 
+  const tvLinked = usePhoneLink((s) => s.status === "connected");
+  const tvStreaming = usePhoneLink((s) => s.streaming);
+
   return (
     <div className="live">
       <video ref={videoRef} playsInline muted />
       <canvas ref={canvasRef} aria-label="Live-Ansicht mit Körpererkennung" />
 
+      <h1 className="sr-only">{liveMode === "analysis" ? "Live-Körperanalyse" : "Live-Training Kniebeugen"}</h1>
       <div className="topbar">
-        <button className="icon-btn" aria-label="Training beenden" onClick={() => actions.finish(now())}>
+        <button className="icon-btn" aria-label={liveMode === "analysis" ? "Analyse beenden" : "Training beenden"} onClick={() => actions.finish(now())}>
           ✕
         </button>
         {source === "demo" && <span className="chip chip-demo" title="Synthetische Bewegungsdaten, keine Kamera">DEMO</span>}
-        <div className="spacer" />
-        {engineStatus === "running" && (
-          <span className="chip" role="status">
-            <span className="dot" style={{ background: q[1] }} />
-            {q[0]}
+        {tvLinked && (
+          <span className="chip chip-tv" role="status" title="Live-Anzeige wird an den gekoppelten Fernseher gesendet">
+            📺 {tvStreaming ? "TV: Bild" : "TV: Figur"}
           </span>
         )}
+        <div className="spacer" />
+        {engineStatus === "running" && <QualityChip view={view} />}
         {engineStatus === "running" && <span className="chip muted">{hud.fps} fps</span>}
       </div>
 
-      {stage === "training" && (
-        <>
-          <div className="hud" aria-live="polite">
-            <span className="hud-label">Wiederholungen</span>
-            <span className="hud-reps">
-              {session.reps.length}
-              <small> / {session.targetReps}</small>
-            </span>
-            <span className="hud-points">{session.points} Punkte</span>
-            {session.combo > 1 && <span className="hud-combo">Combo ×{session.combo}</span>}
-            {lastRep && <span className="muted">Letzte: {lastRep.score.total}/100 (geschätzt)</span>}
-            {hud.phase && (
-              <span className="muted">
-                {hud.phase === "standing" && !hud.armed ? "Aufrecht hinstellen" : PHASE_LABEL[hud.phase]}
-              </span>
-            )}
-          </div>
-          <div className="depth" aria-label="Beugetiefe">
-            <div className="depth-fill" style={{ height: `${depthPct}%` }} />
-            <div className="depth-line" style={{ top: `${goodPct}%` }} title="gute Tiefe" />
-            <div className="depth-line" style={{ top: `${countPct}%`, background: "var(--muted)" }} title="zählt ab hier" />
-          </div>
-          <div className="depth-caption">Tiefe</div>
-        </>
-      )}
+      <div className="live-consent">
+        <TvVideoConsent />
+      </div>
 
-      {feedback && (
-        <div key={feedback.id} className={`toast ${feedback.tone}`} role="status">
-          {feedback.text}
-        </div>
-      )}
-
-      {stage === "training" && running && (hud.quality.status !== "ok" || hud.issue) && (
-        <div className="banner" role="alert">
-          {hud.quality.status !== "ok"
-            ? qualityHint(hud.quality)
-            : `Keine Wertung: ${hud.issue!.join(", ")}. Zurück in die Ausgangsposition und aufrecht hinstellen.`}
-          {hud.issue?.includes("Blickwinkel geändert") && (
-            <button className="btn btn-ghost" style={{ marginTop: 8, minHeight: 40 }} onClick={() => actions.recalibrate(now())}>
-              Neu kalibrieren
-            </button>
-          )}
-        </div>
-      )}
-
-      {stage === "calibrating" && engineStatus === "running" && (
-        <div className="calib" role="status">
-          <ProgressRing value={calib?.progress ?? 0} />
-          <div>
-            <div className="calib-title">Kalibrierung</div>
-            <div className="muted">{calib?.message ?? "Stell dich vor die Kamera."}</div>
-          </div>
-        </div>
-      )}
-
-      {stage === "countdown" && (
-        <div className="overlay" style={{ background: "transparent" }}>
-          <div style={{ textAlign: "center" }}>
-            <div className="countdown" aria-live="assertive">
-              {countdown > 0 ? countdown : "Los!"}
-            </div>
-            {hud.quality.status !== "ok" && <div className="chip">Im Bild bleiben – Countdown wartet</div>}
-          </div>
-        </div>
-      )}
+      <LiveHud
+        view={view}
+        bannerAction={
+          <button className="btn btn-ghost" style={{ marginTop: 8, minHeight: 40 }} onClick={() => actions.recalibrate(now())}>
+            Neu kalibrieren
+          </button>
+        }
+      />
 
       {(engineStatus === "requesting-camera" || engineStatus === "loading-model") && (
         <div className="overlay">
@@ -243,38 +179,30 @@ export function LiveScreen() {
               ❚❚ Pause
             </button>
           )}
-          {stage !== "training" && calibration === null && (
+          {(stage === "calibrating" || stage === "countdown") && calibration === null && (
             <span className="muted" style={{ alignSelf: "center", flex: 1, fontSize: 13 }}>
               Aufrecht und ruhig stehen – der ganze Körper muss sichtbar sein.
             </span>
           )}
-          <button className="btn btn-ghost" onClick={toggleRecording} aria-pressed={recording}>
-            {recording ? `■ Aufnahme (${recordedFrames})` : "● Posen aufnehmen"}
+          {stage === "analysis" && (
+            <button className="btn" onClick={() => actions.finish(now())}>
+              Analyse beenden
+            </button>
+          )}
+          <button
+            className="btn btn-ghost"
+            onClick={toggleRecording}
+            aria-pressed={recording}
+            title="Zeichnet nur Körperpunkte mit Zeitstempel auf (kein Kamerabild) und lädt sie beim Stoppen als JSON-Datei auf dieses Gerät herunter."
+          >
+            {recording ? `■ Aufnahme stoppen & speichern (${recordedFrames})` : "● Posen aufnehmen"}
           </button>
+          {recording && (
+            <p className="small muted rec-note">Nur Körperpunkte, kein Kamerabild – Download als Datei beim Stoppen.</p>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function ProgressRing({ value }: { value: number }) {
-  const r = 20;
-  const c = 2 * Math.PI * r;
-  return (
-    <svg width="52" height="52" viewBox="0 0 52 52" aria-label={`${Math.round(value * 100)} %`}>
-      <circle cx="26" cy="26" r={r} fill="none" stroke="var(--surface-raised)" strokeWidth="5" />
-      <circle
-        cx="26"
-        cy="26"
-        r={r}
-        fill="none"
-        stroke="var(--motion)"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeDasharray={c}
-        strokeDashoffset={c * (1 - value)}
-        transform="rotate(-90 26 26)"
-      />
-    </svg>
-  );
-}

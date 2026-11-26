@@ -1,8 +1,10 @@
 # Motion Arena
 
 **Fitness-Bewegungsspiel für Smartphone und Browser.** Die Kamera erfasst die Person, MediaPipe Pose schätzt die
-Körperhaltung, Kniebeugen werden live gezählt, verständlich bewertet und mit Punkten und Combos belohnt.
-Alles läuft lokal auf dem Gerät – kein Kamerabild und keine Bewegungsdaten verlassen den Browser.
+Körperhaltung, Kniebeugen werden live gezählt, verständlich bewertet und mit Punkten und Combos belohnt. Dazu:
+10 Ansichten der Körperspiegelung, eine Live-Körperanalyse, 15 Avatare in 20 Trainingsräumen und ein TV-Modus.
+Die Erkennung läuft lokal auf dem Gerät – Kamerabild und Bewegungsdaten verlassen das Handy nur, wenn du selbst einen
+Fernseher koppelst (dann direkt zu diesem, das Bild nur mit deiner Zustimmung).
 
 Designrichtung **Kinetic Studio**: dunkles Petrol/Graphit, warmes Weiß, Korallorange als Akzent, Türkis für die
 Körperspiegelung.
@@ -17,16 +19,18 @@ oder <a href="https://youra82.github.io/motion_arena/?install=1"><b>youra82.gith
 </td>
 </tr></table>
 
-> **Stand:** Phase 1 – Smartphone-MVP mit der Übung Kniebeuge. Die Logik ist mit 93 Unit-Tests und 9 Browsertests
-> abgesichert und wurde in zwei unabhängigen Prüfrunden (Codex) gehärtet. **Noch nicht erfolgt:** der Test mit einer
-> echten Person vor einer echten Handykamera – siehe [Status](docs/STATUS.md).
+> **Stand:** Version 0.2 – Übung Kniebeuge, Startseite mit Fortschritt, alle 10 Ansichten, Live-Körperanalyse,
+> TV-Modus, Avatare und Räume. Abgesichert mit 235 Unit-Tests und 30 Browsertests, gehärtet in fünf unabhängigen
+> Prüfrunden (Codex). **Noch nicht erfolgt:** der Test mit einer echten Person vor einer echten Handykamera und auf
+> einem echten Fernseher – siehe [Status](docs/STATUS.md).
 
 <p align="center">
   <img src="docs/screenshots/01-start.png" width="190" alt="Startseite" />
   <img src="docs/screenshots/05-wiederholung-gezaehlt.png" width="190" alt="Wiederholung gezählt" />
-  <img src="docs/screenshots/07-ansicht-avatar-platzhalter.png" width="190" alt="Avatar-Platzhalter" />
-  <img src="docs/screenshots/14-ergebnis-ziel-erreicht.png" width="190" alt="Ergebnis" />
+  <img src="docs/screenshots/38-analyse-kniebeuge.png" width="190" alt="Live-Körperanalyse" />
+  <img src="docs/screenshots/33-avatar-raum.png" width="190" alt="Avatar und Raum" />
 </p>
+<p align="center"><img src="docs/screenshots/42-tv-spiegelung.png" width="770" alt="Fernseher zeigt dasselbe wie das Handy" /></p>
 <p align="center"><sub>Alle Bildschirme der App: <a href="#galerie">Galerie</a>. Screenshots automatisch erzeugt (Demo-Modus mit synthetischer Bewegung bzw. Chrome-Testkamera – keine echte Person).</sub></p>
 
 ---
@@ -35,6 +39,7 @@ oder <a href="https://youra82.github.io/motion_arena/?install=1"><b>youra82.gith
 
 - [Funktionen](#funktionen)
 - [Galerie](#galerie)
+- [Auf dem Fernseher anzeigen](#auf-dem-fernseher-anzeigen)
 - [Installation](#installation) – Handy per QR-Code, Windows automatisch, manuell, Dauerbetrieb, [Fehlerbehebung](#fehlerbehebung)
 - [So funktioniert die Erkennung](#so-funktioniert-die-erkennung)
 - [Bewertung und Punkte](#bewertung-und-punkte)
@@ -59,8 +64,12 @@ oder <a href="https://youra82.github.io/motion_arena/?install=1"><b>youra82.gith
 | **Fehlversuche** | „Zu flach“ und „zu schnell“ werden erkannt, nicht gezählt und kurz erklärt |
 | **Unsichere Erkennung** | Teilkörper, geringe Konfidenz, Kameralücken, Blickwinkelwechsel → **Warnung statt Wertung**, keine Strafpunkte, Combo bleibt erhalten |
 | **Bewertung** | Schematische Punkte 0–100 aus Tiefe, Kontrolle, Links/Rechts-Symmetrie und (nur seitlich) Haltung, jeweils mit Hinweis „geschätzt“ |
-| **Spiel** | Punkte, Combo-Bonus bis +50 %, Ziel 5/10/15 Wiederholungen, Countdown, Pause, Ergebnisseite |
-| **Ansichten** | Hybrid (Video + Skelett), Echtbild, Silhouette (lokale Personenmaske), Skelett, Bewegungsspur, Avatar (Platzhalter). Wechsel jederzeit ohne Datenverlust |
+| **Spiel** | Punkte, Combo-Bonus bis +50 %, Ziel 5/10/15/20 Wiederholungen, Countdown, Pause, Ergebnisseite |
+| **Startseite & Fortschritt** | Startseite im Kinetic-Studio-Stil mit Versionsnummer, Bewegungspräzision des letzten Trainings, Wochenplan mit Wochenziel, 30-Tage-Challenge, Serie, Verlauf der letzten 14 Tage. Nur echte Kamera-Trainings zählen; gespeichert nur auf dem Gerät (höchstens 1000 Einträge) |
+| **10 Ansichten** | Hybrid (Video + Skelett), Echtbild, Silhouette (lokale Personenmaske), Skelett, **Gittermodell**, **Hologramm**, **Avatar**, **Muskelansicht** (geschätzte Beanspruchung), **Bewegungszonen** (Bewegungsintensität), Bewegungsspur. Wechsel jederzeit ohne Datenverlust |
+| **Live-Körperanalyse** | Freier Modus ohne Übung: erkennt Stehen, Kniebeuge, Einbeinstand, Ausfallschritt, Hampelmann, Arme heben, Stütz – sonst „unbekannt“ statt geraten. Trennt **Bewegungsintensität** von **vermuteter Beanspruchung** je Körperzone (gering/mittel/hoch/unsicher, keine Prozente), Körperschema mit deiner linken/rechten Seite |
+| **Avatare & Räume** | 15 eigenständig gestaltete Avatare (Lukas … Echo, stilisiert 2D) folgen live der Bewegung; 20 Trainingsräume (Core Studio … Sunrise Deck) als Hintergrund aller Ansichten ohne Kamerabild, mit dezenter Lichtreaktion auf Beugetiefe und Wiederholungen |
+| **TV-Modus** | Fernseher zeigt **dasselbe wie die App** – gleiche Anzeige im gleichen Seitenverhältnis, mit Zustimmung als Live-Bild 1:1. Kopplung per QR-Code (sofort) oder Code (Bestätigung am Fernseher), direkt per WebRTC |
 | **Signaturen** | Präzisionsring am Boden (zeigt die Beugetiefe, leuchtet bei gezählter Wiederholung), Bewegungsspur mit Nachbildern |
 | **Installierbar** | Per QR-Code auf dem Handy installieren: Android mit einem Tipp („Jetzt installieren“), iPhone mit geführter Anleitung. Startet ohne Browserleiste und funktioniert danach **offline** (Service Worker speichert App, Erkennung und Modell) |
 | **Demo-Modus** | Synthetische Kniebeugen ohne Kamera, deutlich als **DEMO** gekennzeichnet |
@@ -73,38 +82,53 @@ oder <a href="https://youra82.github.io/motion_arena/?install=1"><b>youra82.gith
 
 Jeder Bildschirm und Zustand, den die App darstellen kann. Die Bilder erzeugt `pnpm screenshots`
 ([tests/screenshots/](tests/screenshots/)) automatisch – nach jeder Oberflächenänderung neu erzeugbar.
-**Demo-Bilder** zeigen synthetische Bewegung, **Kamera-Bilder** die Chrome-Testkamera ohne Person.
+**Demo-Bilder** zeigen synthetische Bewegung, **Kamera-Bilder** die Chrome-Testkamera ohne Person, der Verlauf unter
+„Fortschritt“ ist ein Beispiel.
 
-### Start und Einrichtung
+### Startseite und Bereiche
 
 <table>
-<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/01-start.png" width="230" alt="Startseite" /><br/><b>Startseite</b><br/><sub>Übung, Ziel, Start mit Kamera oder Demo</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/02-start-ganze-seite.png" width="230" alt="Startseite (ganz)" /><br/><b>Startseite (ganz)</b><br/><sub>Ziel 5/10/15, Tipps zur Aufstellung, Modellwahl lite/full, Datenschutzhinweis</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/17-laden-koerpererkennung.png" width="230" alt="Laden" /><br/><b>Laden</b><br/><sub>Körpererkennung wird lokal geladen – jederzeit abbrechbar</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/01-start.png" width="230" alt="Startseite" /><br/><b>Startseite</b><br/><sub>Nächstes Training, Ziel 5–20, Bewegungspräzision, Versionsnummer oben rechts</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/02-start-ganze-seite.png" width="230" alt="Startseite (ganz)" /><br/><b>Startseite (ganz)</b><br/><sub>Körperanalyse, Fernseher, Bereiche, Challenge, Datenschutz</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/30-workouts.png" width="230" alt="Workouts" /><br/><b>Workouts</b><br/><sub>Kniebeuge mit Ziel, Live-Körperanalyse, Tipps zur Aufstellung</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/31-fortschritt.png" width="230" alt="Fortschritt" /><br/><b>Fortschritt</b><br/><sub>Wochenplan, 30-Tage-Challenge, Kennzahlen, letzte 14 Tage, Verlauf</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/32-profil.png" width="230" alt="Profil" /><br/><b>Profil</b><br/><sub>Avatar & Raum, Modell, Standard-Ziel und -Ansicht, Fernseher, Verlauf löschen</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/33-avatar-raum.png" width="230" alt="Avatar & Raum" /><br/><b>Avatar & Raum</b><br/><sub>15 Avatare, 20 Räume, animierte Vorschau</sub></td></tr>
 </table>
+
+<p align="center"><img src="docs/screenshots/33b-avatar-raum-ganze-seite.png" width="300" alt="Avatar & Raum (ganze Seite)" /><br/>
+<sub>Alle 15 Avatare (filterbar nach Trainer, Athletisch, Kämpferisch, Balance, Energie) und alle 20 Trainingsräume.</sub></p>
 
 ### Kalibrierung und Countdown
 
 <table>
-<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/03-kalibrierung.png" width="230" alt="Kalibrierung" /><br/><b>Kalibrierung</b><br/><sub>1,5 s ruhig stehen, Fortschrittsring, Hinweise bei Fehlern</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/04-countdown.png" width="230" alt="Countdown" /><br/><b>Countdown</b><br/><sub>3-2-1, wartet, solange die Person nicht sicher erkannt wird</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/18-kamera-hybrid-keine-person.png" width="230" alt="Keine Person (Kamera)" /><br/><b>Keine Person (Kamera)</b><br/><sub>Status „Keine Person“ – es wird nichts gewertet</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/17-laden-koerpererkennung.png" width="230" alt="Laden" /><br/><b>Laden</b><br/><sub>Körpererkennung wird lokal geladen – jederzeit abbrechbar</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/03-kalibrierung.png" width="230" alt="Kalibrierung" /><br/><b>Kalibrierung</b><br/><sub>1,5 s ruhig stehen, Fortschrittsring, Hinweise bei Fehlern</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/04-countdown.png" width="230" alt="Countdown" /><br/><b>Countdown</b><br/><sub>3-2-1, wartet, solange die Person nicht sicher erkannt wird</sub></td></tr>
 </table>
 
-### Training und Ansichten
+### Training
 
 <table>
-<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/05-wiederholung-gezaehlt.png" width="230" alt="Wiederholung gezählt" /><br/><b>Wiederholung gezählt</b><br/><sub>Zähler, Punkte, Rückmeldung, leuchtender Präzisionsring</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/08-ansicht-skelett.png" width="230" alt="Ansicht: Skelett" /><br/><b>Ansicht: Skelett</b><br/><sub>Gelenkpunkte und Kopf in Türkis, Tiefenbalken rechts</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/06-ansicht-bewegungsspur.png" width="230" alt="Ansicht: Bewegungsspur" /><br/><b>Ansicht: Bewegungsspur</b><br/><sub>Nachbilder der letzten Posen (Motion-Spur)</sub></td></tr>
-<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/07-ansicht-avatar-platzhalter.png" width="230" alt="Ansicht: Avatar" /><br/><b>Ansicht: Avatar</b><br/><sub>Klar gekennzeichneter Platzhalter, kein 3D-Modell</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/19-kamera-echtbild.png" width="230" alt="Ansicht: Echtbild (Kamera)" /><br/><b>Ansicht: Echtbild (Kamera)</b><br/><sub>Ganzes Kamerabild, gespiegelt wie ein Selfie</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/20-kamera-silhouette.png" width="230" alt="Ansicht: Silhouette (Kamera)" /><br/><b>Ansicht: Silhouette (Kamera)</b><br/><sub>Lokale Personenmaske – ohne Person im Bild bleibt sie leer</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/05-wiederholung-gezaehlt.png" width="230" alt="Wiederholung gezählt" /><br/><b>Wiederholung gezählt</b><br/><sub>Zähler, Punkte, Rückmeldung, leuchtender Präzisionsring, Raumlicht</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/09-feedback-zu-flach.png" width="230" alt="Zu flach" /><br/><b>Zu flach</b><br/><sub>Nicht gezählt, kurze Erklärung, Combo endet ohne Punktabzug</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/10-warnung-keine-person.png" width="230" alt="Warnung statt Wertung" /><br/><b>Warnung statt Wertung</b><br/><sub>Person verschwindet: Banner, keine Wertung, Combo bleibt</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/13-ziel-erreicht-live.png" width="230" alt="Ziel erreicht" /><br/><b>Ziel erreicht</b><br/><sub>Letzte Wiederholung, danach automatisch zum Ergebnis</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/11-pause.png" width="230" alt="Pause" /><br/><b>Pause</b><br/><sub>Fortsetzen, neu kalibrieren oder beenden</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/12-ergebnis.png" width="230" alt="Ergebnis" /><br/><b>Ergebnis</b><br/><sub>Wiederholungen, Punkte, Ø-Bewertung, Combo, Zeit, nicht gezählte Versuche</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/14-ergebnis-ziel-erreicht.png" width="230" alt="Ergebnis: Ziel erreicht" /><br/><b>Ergebnis: Ziel erreicht</b><br/><sub>Liste aller Wiederholungen mit Hinweisen und Punkten</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/16-fehler-kamera-verweigert.png" width="230" alt="Kamera verweigert" /><br/><b>Kamera verweigert</b><br/><sub>Verständlicher Fehler mit Ausweg: erneut, Demo oder zurück</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/18-kamera-hybrid-keine-person.png" width="230" alt="Keine Person (Kamera)" /><br/><b>Keine Person (Kamera)</b><br/><sub>Status „Keine Person“ – es wird nichts gewertet</sub></td></tr>
 </table>
 
-### Rückmeldungen und Warnungen
+### Die 10 Ansichten
 
 <table>
-<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/09-feedback-zu-flach.png" width="230" alt="Zu flach" /><br/><b>Zu flach</b><br/><sub>Nicht gezählt, kurze Erklärung, Combo endet ohne Punktabzug</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/10-warnung-keine-person.png" width="230" alt="Warnung statt Wertung" /><br/><b>Warnung statt Wertung</b><br/><sub>Person verschwindet: Banner, keine Wertung, Combo bleibt</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/13-ziel-erreicht-live.png" width="230" alt="Ziel erreicht" /><br/><b>Ziel erreicht</b><br/><sub>Letzte Wiederholung, danach automatisch zum Ergebnis</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/18-kamera-hybrid-keine-person.png" width="230" alt="Hybrid" /><br/><b>Hybrid</b><br/><sub>Kamerabild + Skelett</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/19-kamera-echtbild.png" width="230" alt="Echtbild" /><br/><b>Echtbild</b><br/><sub>Ganzes Kamerabild, gespiegelt wie ein Selfie</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/20-kamera-silhouette.png" width="230" alt="Silhouette" /><br/><b>Silhouette</b><br/><sub>Lokale Personenmaske – ohne Person bleibt sie leer</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/08-ansicht-skelett.png" width="230" alt="Skelett" /><br/><b>Skelett</b><br/><sub>Gelenkpunkte im Trainingsraum</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/34-ansicht-gitter.png" width="230" alt="Gittermodell" /><br/><b>Gittermodell</b><br/><sub>Triangulierte Körperhülle</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/35-ansicht-hologramm.png" width="230" alt="Hologramm" /><br/><b>Hologramm</b><br/><sub>Leuchtende Körperform mit Scanlines (ruhig bei „Bewegung reduzieren“)</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/07-ansicht-avatar.png" width="230" alt="Avatar" /><br/><b>Avatar</b><br/><sub>Gewählter Avatar folgt live der Bewegung (stilisiert 2D)</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/36-ansicht-muskel.png" width="230" alt="Muskelansicht" /><br/><b>Muskelansicht</b><br/><sub>Geschätzte Beanspruchung je Zone – keine Messung</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/37-ansicht-zonen.png" width="230" alt="Bewegungszonen" /><br/><b>Bewegungszonen</b><br/><sub>Bewegungsintensität der Gelenke (Geschwindigkeit)</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/06-ansicht-bewegungsspur.png" width="230" alt="Bewegungsspur" /><br/><b>Bewegungsspur</b><br/><sub>Nachbilder der letzten Posen (Motion-Spur)</sub></td></tr>
 </table>
 
-### Pause, Ergebnis, Fehler
+### Live-Körperanalyse
 
 <table>
-<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/11-pause.png" width="230" alt="Pause" /><br/><b>Pause</b><br/><sub>Fortsetzen, neu kalibrieren oder beenden</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/12-ergebnis.png" width="230" alt="Ergebnis" /><br/><b>Ergebnis</b><br/><sub>Wiederholungen, Punkte, Ø-Bewertung, Combo, Zeit, nicht gezählte Versuche</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/14-ergebnis-ziel-erreicht.png" width="230" alt="Ergebnis: Ziel erreicht" /><br/><b>Ergebnis: Ziel erreicht</b><br/><sub>Liste aller Wiederholungen mit Hinweisen und Punkten</sub></td></tr>
-<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/16-fehler-kamera-verweigert.png" width="230" alt="Kamera verweigert" /><br/><b>Kamera verweigert</b><br/><sub>Verständlicher Fehler mit Ausweg: erneut, Demo oder zurück</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/38-analyse-kniebeuge.png" width="230" alt="Kniebeuge erkannt" /><br/><b>Kniebeuge erkannt</b><br/><sub>Vermutete Bewegung, Intensität, Körperschema mit L/R</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/38b-analyse-einbeinstand.png" width="230" alt="Einbeinstand erkannt" /><br/><b>Einbeinstand erkannt</b><br/><sub>Standbein stärker beansprucht (geschätzt)</sub></td></tr>
+</table>
+
+### Auf dem Fernseher
+
+<table>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/39-tv-koppeln.png" width="230" alt="TV wartet" /><br/><b>TV wartet</b><br/><sub>QR-Code (koppelt sofort) und Code zum Eintippen</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/40-tv-bestaetigen.png" width="230" alt="Code eingetippt" /><br/><b>Code eingetippt</b><br/><sub>Am Fernseher annehmen oder ablehnen – Knopf für die Fernbedienung ausgewählt</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/41-tv-zustimmung-handy.png" width="230" alt="Zustimmung am Handy" /><br/><b>Zustimmung am Handy</b><br/><sub>Bild 1:1 spiegeln oder nur Figur ohne Kamerabild</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><img src="docs/screenshots/42-tv-spiegelung.png" width="230" alt="Spiegelung" /><br/><b>Spiegelung</b><br/><sub>Fernseher zeigt dieselbe Anzeige wie das Handy (hier: Figur im Raum)</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/43-tv-handy-sendet.png" width="230" alt="Handy sendet" /><br/><b>Handy sendet</b><br/><sub>„📺 TV: Figur/Bild“ zeigt, dass gesendet wird</sub></td><td align="center" valign="top" width="33%"><img src="docs/screenshots/44-tv-ergebnis.png" width="230" alt="Ergebnis am TV" /><br/><b>Ergebnis am TV</b><br/><sub>Wie am Handy, inklusive DEMO-Kennzeichnung und Einzelwertungen</sub></td></tr>
 </table>
 
 ### Installation auf dem Handy
@@ -130,15 +154,36 @@ Visuelle Richtung für spätere Phasen – **keine** verwendbaren 3D-Modelle ode
 <table>
 <tr>
 <td align="center" valign="top" width="33%"><img src="docs/references/mobile_kinetic_studio.png" width="230" alt="Mobile Kinetic Studio" /><br/><b>Mobile – Kinetic Studio</b><br/><sub>Zielbild der Smartphone-Startseite</sub></td>
-<td align="center" valign="top" width="33%"><img src="docs/references/tv_kinetic_studio.png" width="230" alt="TV Kinetic Studio" /><br/><b>TV-Modus</b><br/><sub>Trainer und Spieler zentral (Phase 2)</sub></td>
-<td align="center" valign="top" width="33%"><img src="docs/references/mirror_modes_10.png" width="230" alt="10 Spiegelungsmodi" /><br/><b>10 Spiegelungsmodi</b><br/><sub>6 davon sind in Phase 1 umgesetzt</sub></td>
+<td align="center" valign="top" width="33%"><img src="docs/references/tv_kinetic_studio.png" width="230" alt="TV Kinetic Studio" /><br/><b>TV-Modus</b><br/><sub>Umgesetzt als 1:1-Spiegelung der App</sub></td>
+<td align="center" valign="top" width="33%"><img src="docs/references/mirror_modes_10.png" width="230" alt="10 Spiegelungsmodi" /><br/><b>10 Spiegelungsmodi</b><br/><sub>Alle 10 umgesetzt</sub></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="33%"><img src="docs/references/avatars_15.png" width="230" alt="15 Avatare" /><br/><b>15 Avatare</b><br/><sub>Trainer, Spieler-Avatar oder Gegner (Phase 4)</sub></td>
-<td align="center" valign="top" width="33%"><img src="docs/references/training_rooms_20.png" width="230" alt="20 Trainingsräume" /><br/><b>20 Trainingsräume</b><br/><sub>Core Studio bis Sunrise Deck (Phase 4)</sub></td>
-<td align="center" valign="top" width="33%"><img src="docs/references/body_load_concept.png" width="230" alt="Live Body Load" /><br/><b>Live Body Load</b><br/><sub>Grobe, geschätzte Beanspruchungszonen (Phase 3)</sub></td>
+<td align="center" valign="top" width="33%"><img src="docs/references/avatars_15.png" width="230" alt="15 Avatare" /><br/><b>15 Avatare</b><br/><sub>Umgesetzt als stilisierte 2D-Figuren</sub></td>
+<td align="center" valign="top" width="33%"><img src="docs/references/training_rooms_20.png" width="230" alt="20 Trainingsräume" /><br/><b>20 Trainingsräume</b><br/><sub>Umgesetzt als gezeichnete Räume mit Lichtreaktion</sub></td>
+<td align="center" valign="top" width="33%"><img src="docs/references/body_load_concept.png" width="230" alt="Live Body Load" /><br/><b>Live Body Load</b><br/><sub>Umgesetzt als Live-Körperanalyse</sub></td>
 </tr>
 </table>
+
+---
+
+## Auf dem Fernseher anzeigen
+
+Der Fernseher zeigt dasselbe wie die App am Handy – nur groß. Am Fernseher wird nichts installiert, nur ein Browser
+gebraucht (Smart-TV-Browser, Fire TV/Android TV mit Browser, Laptop am HDMI-Eingang …).
+
+1. Am Fernseher **[youra82.github.io/motion_arena/?tv](https://youra82.github.io/motion_arena/?tv)** öffnen – oder in der
+   App „Dieses Gerät ist der Fernseher“ wählen. Es erscheinen ein QR-Code und ein 6-stelliger Code.
+2. Mit dem Handy den **QR-Code scannen** → Motion Arena öffnet sich und koppelt sofort.
+   Alternativ in der App auf der Startseite unter „Auf dem Fernseher anzeigen“ den **Code eintippen** – dann am
+   Fernseher **„Annehmen“** drücken (Fernbedienung: der Knopf ist schon ausgewählt).
+3. Einmalig fragt das Handy, ob das **Bild 1:1** gespiegelt werden darf (mit Kamerabild in Echtbild/Hybrid).
+   Ohne Zustimmung zeigt der Fernseher die Figur aus den Körperpunkten im gewählten Raum – ohne Kamerabild.
+4. Training oder Analyse am Handy starten – der Fernseher zeigt Zähler, Punkte, Hinweise, Analyse und Ergebnis.
+   Im Live-Bild am Handy zeigt **„📺 TV: Bild/Figur“**, dass gerade gesendet wird. „Trennen“ beendet die Kopplung.
+
+Tipps: Handy im **Querformat** aufstellen, damit das Bild den Fernseher füllt. Handy und Fernseher sollten im selben
+WLAN sein. Es kann immer nur **ein** Handy mit einem Fernseher verbunden sein; unbenutzte Codes werden nach 10 Minuten
+erneuert.
 
 ---
 
@@ -406,7 +451,9 @@ pnpm build && pnpm e2e   # Browsertests mit installiertem Chrome
 | `pnpm` bzw. `node` wird nicht gefunden | PowerShell neu öffnen; bei portabler Version `$env:PATH` wie in Schritt 1 setzen |
 | Port 5173 belegt | anderes Programm beenden oder `pnpm --filter @motion-arena/mobile-web exec vite --port 5174` |
 | Ständig „Keine Person“ / „Teilkörper“ | weiter weg (2–3 m), Kopf bis Füße im Bild, mehr Licht, ruhiger Hintergrund |
-| Ruckelt (niedrige fps) | Startseite: Modell **„Schnell (lite)“**; Ansicht **Skelett** statt Silhouette |
+| Ruckelt (niedrige fps) | Profil: Modell **„Schnell (lite)“**; Ansicht **Skelett** statt Silhouette oder Hologramm |
+| Fernseher koppelt nicht | Beide Geräte im selben WLAN? Gast-WLAN/„Client-Isolation“ verhindert die Direktverbindung (es gibt bewusst keinen Umweg über fremde Server). Am TV „Neuer Code“, am Handy „Trennen“ und erneut scannen |
+| „Der Fernseher ist schon mit einem anderen Handy verbunden“ | Am anderen Handy „Trennen“ oder am TV „TV-Modus beenden“ und neu öffnen |
 | `pnpm e2e` findet keinen Browser | Google Chrome installieren (die Tests nutzen das installierte Chrome) |
 
 ---
@@ -535,7 +582,16 @@ motion_arena/
 
 ## Datenschutz
 
-- Kamerabilder werden **ausschließlich im Browser auf dem Gerät** verarbeitet – nicht gespeichert, nicht übertragen.
+- Kamerabilder werden **im Browser auf dem Gerät** verarbeitet und nicht gespeichert. Ohne TV-Kopplung verlässt nichts
+  das Gerät (Browsertest mit Netzwerkmitschnitt).
+- **Trainingsverlauf und Einstellungen** liegen nur im Speicher des Browsers (localStorage) und werden nie gesendet;
+  im Profil löschbar.
+- **TV-Kopplung (nur wenn du sie startest):** Zum Finden der Geräte werden der Vermittlungsdienst `0.peerjs.com` und
+  ein STUN-Server von Google (`stun.l.google.com`, nennt jedem Gerät seine Netzadresse) kontaktiert. Danach gehen
+  Körperpunkte und Live-Werte – und **nur mit Zustimmung** das Live-Bild – verschlüsselt (WebRTC) **direkt** vom Handy
+  zum Fernseher; Relay-Server (TURN) sind bewusst nicht eingerichtet. Der QR-Code enthält einen geheimen Schlüssel,
+  ein eingetippter Code muss am Fernseher bestätigt werden, weitere Handys werden abgewiesen. Alle Nachrichten werden
+  am Fernseher streng geprüft. Ein Widerruf der Bildfreigabe beendet den Videostream sofort.
 - Modelle und WASM werden vom eigenen Server ausgeliefert, nicht von einem CDN. Auf GitHub Pages liefert GitHub
   nur die statischen Dateien aus – es gibt kein Backend, keine Anmeldung, keine Analyse-Tools.
 - Nach der Installation hält ein Service Worker App und Modell auf dem Gerät vor; es werden dabei nur die
@@ -551,8 +607,8 @@ motion_arena/
 ## Tests
 
 ```bash
-pnpm test        # 93 Tests
-pnpm build && pnpm e2e   # 9 Browsertests
+pnpm test        # 235 Tests
+pnpm build && pnpm e2e   # 30 Browsertests
 ```
 
 | Ebene | Inhalt |
@@ -561,7 +617,11 @@ pnpm build && pnpm e2e   # 9 Browsertests
 | **Zähler** | Definition of Done „3 saubere Kniebeugen = 3“ in 5 Kamera-Varianten und mit 20 Rausch-Seeds; Wippen, Zittern, zu flach/schnell/langsam/tief, Teilkörper, Verschwinden in der Hocke, Abstandsänderung, Drehung, Zeitstempel-Fehler, Lücken, Ausreißer, Messquellenwechsel |
 | **Session** | Punkte, Combo, Fehlversuche, Erkennungsaussetzer ohne Strafe, Pause ohne Zeitzählung |
 | **Engine** | Abbruch während Kamera-/Modellladen, React-StrictMode-Doppelstart, Fehler im Lauf, Masken-Umschaltung, GPU→CPU, Pause zwischen zwei Bildern, Ziel-Timer (MediaPipe-Attrappe) |
-| **Browser** | Kompletter Demo-Ablauf inkl. Ansichtswechsel ohne Datenverlust; echte MediaPipe-Erkennung mit Chrome-Testkamera; verweigerte Kamera; Laden abbrechen; Netzwerk-Nachweis Datenschutz; Manifest/Icons; **Service Worker mit Offline-Start**; Installationskarte für Android (Installationsdialog) und iPhone (Anleitung) |
+| **Fortschritt & Speicher** | Kalendertage, Sommerzeit, Wochenbeginn Montag, Challenge-Abschnitte, Zukunftsdaten, beschädigte/manipulierte/doppelte Einträge, Speicher voll oder gesperrt, Aufbewahrungsgrenze |
+| **Körperanalyse** | Bewegungen frontal/seitlich, gekippte Kamera, Gehen, Hinsetzen, Vorbeugen, Armschwingen, Ausreißer, Bildlücken, verdeckte Gelenke, fehlende 3D-Daten, Seitenzuordnung |
+| **TV** | Protokollprüfung (Typen, Längen, Grenzen, Version), Sitzungsbindung, Bestätigung, Rennen bei Auf-/Abbau, Aufräumen von Video/Timern, Widerruf auch bei Speicherfehler |
+| **Darstellung** | Körpergitter bei degenerierten/seitlichen Posen, 20 Räume, 15 Avatare, Einstellungen |
+| **Browser** | Kompletter Demo-Ablauf inkl. Ansichtswechsel ohne Datenverlust; echte MediaPipe-Erkennung mit Chrome-Testkamera und Personenbild (Silhouette, Körperanalyse); verweigerte Kamera; Laden abbrechen; Netzwerk-Nachweis Datenschutz; **Service Worker mit Offline-Start**; Installationskarten; Navigation und Einstellungen; **TV-Kopplung** (QR, Code mit Annehmen/Ablehnen, zweites Handy, gleiche Anzeige, Ergebnis); Avatar & Raum |
 
 Die Bewegungstests nutzen einen **synthetischen Posen-Generator** (`synthPose`, `synthSequence`) mit realistischen
 Proportionen, Front- und Seitenansicht, 3D-Weltkoordinaten, Rauschen, Verdeckung und Kameradrehung.
@@ -583,7 +643,7 @@ Tests verwenden:
 
 ## Qualitätssicherung mit Codex
 
-Claude Code hat den Code gebaut; OpenAI Codex hat ihn in zwei Runden unabhängig geprüft und dabei **gegnerische Tests**
+Claude Code hat den Code gebaut; OpenAI Codex hat ihn in mehreren Runden unabhängig geprüft und dabei **gegnerische Tests**
 geschrieben, die versuchen, die Logik zu brechen. Codex durfte nur neue Testdateien anlegen – die Fehler blieben rot,
 bis Claude sie im Quellcode behoben hatte.
 
@@ -591,9 +651,12 @@ bis Claude sie im Quellcode behoben hatte.
 | --- | --- | --- | --- |
 | [1](docs/reviews/codex-review-1.md) | 18 | Abstandsänderung erfand/verschluckte Wiederholungen; NaN vergiftete Punktestand; Kameralücken zählten als Bewegung; Einzelausreißer erzeugte Fehlversuch | alle behoben |
 | [2](docs/reviews/codex-review-2.md) | 12 | MediaPipe-Telemetrie an Google; alte Engine koppelte Video der neuen ab; gerollte Kamera erzeugte Tiefe; 3D-Ausfall wurde „zu flach“; Pause zwischen zwei Bildern | alle behoben |
+| [3](docs/reviews/codex-review-3.md) | 15 | Defekter Verlaufseintrag blockierte die Startseite; Löschen meldete Erfolg trotz Fehler; schräge Kamera ergab Einbeinstand; Sitzen galt als Kniebeuge; Unsicherheit wurde als „gering“ angezeigt | alle behoben |
+| [4](docs/reviews/codex-review-4.md) | 13 | TV: Bild und Anzeige konnten von verschiedenen Handys stammen; Code ersetzte Bestätigung; kaputte Nachrichten erreichten den TV; Widerruf nach Speicherfehler unwirksam; Videospuren liefen nach Trennen weiter | alle behoben |
+| [5](docs/reviews/codex-review-5.md) | 9 | Fehlgeschlagener Widerruf galt nach Neuladen wieder; TV-Zulassung erst beim Öffnen geprüft; Avatar stürzte bei fehlendem Handgelenk ab; TV verlor Vorder-/Rückseite; Vorschau ignorierte „Bewegung reduzieren“ | alle behoben |
 
-Aufträge und Berichte liegen in [`docs/reviews/`](docs/reviews/), die Codex-Tests in `packages/*/test/codex/` und
-`apps/mobile-web/src/engine/LiveEngine-r2.test.ts`.
+Aufträge und Berichte liegen in [`docs/reviews/`](docs/reviews/), die Codex-Tests in `packages/*/test/codex/`,
+`apps/mobile-web/src/**/*-r*.test.ts` und `tests/e2e/*-r*.spec.ts`.
 
 ---
 
@@ -603,10 +666,15 @@ Aufträge und Berichte liegen in [`docs/reviews/`](docs/reviews/), die Codex-Tes
   schematische Schätzung und **keine medizinische oder trainerische Beurteilung**.
 - Frontal ist der Kniewinkel nur über die geschätzten 3D-Weltkoordinaten bestimmbar; am genauesten ist eine leicht
   schräge oder seitliche Aufstellung.
-- Der **Avatar ist ein Platzhalter** aus Kapseln, kein riggbares 3D-Modell (keine lizenzierten Assets vorhanden).
-- Phase 1 enthält 6 der geplanten 10 Ansichten und nur die Übung Kniebeuge.
+- Die **Live-Körperanalyse** zeigt eine grobe, modellbasierte **Vermutung**, welche Zonen beansprucht werden – keine
+  Messung von Muskelaktivität, Kräften, Gewichtsverteilung oder Verletzungsrisiko.
+- **Avatare und Räume** sind eigenständig gestaltete, **stilisierte 2D-Zeichnungen** (ohne Gesichter), kein riggbares
+  3D-Modell und keine Nachbildung der Konzeptbilder.
+- Nur die Übung Kniebeuge wird gezählt und bewertet.
+- **TV-Modus ohne Relay:** Lassen Router/Firewall keine direkte Verbindung zu, klappt die Kopplung nicht (kein Umweg
+  über fremde Server).
 - **Nicht getestet:** echte Person vor echter Kamera, Leistung auf Handys (fps, Wärme, Akku), iOS Safari/Android
-  Chrome, Silhouette mit echter Person. Details: [docs/STATUS.md](docs/STATUS.md).
+  Chrome, echter Fernseher. Details: [docs/STATUS.md](docs/STATUS.md).
 
 ---
 
@@ -615,9 +683,10 @@ Aufträge und Berichte liegen in [`docs/reviews/`](docs/reviews/), die Codex-Tes
 | Phase | Inhalt | Stand |
 | --- | --- | --- |
 | 1 | Smartphone-MVP: Kamera, Pose, Kalibrierung, Kniebeuge, Punkte, Ansichten | **gebaut**, Handytest offen |
-| 2 | TV-Modus: Kopplung per QR/Code, WebSocket-Signaling, Posen/Score auf dem TV, später WebRTC | geplant |
-| 3 | Live Body Load: grobe, relative Beanspruchungszonen mit Konfidenz und Hinweis „geschätzt“ | geplant |
-| 4 | Inhalte: 20 Trainingsräume, 15 Avatare, 10 Ansichten – nach Verfügbarkeit lizenzierter Assets | geplant |
+| 2 | TV-Modus: Kopplung per QR/Code, gleiche Anzeige, Live-Bild per WebRTC | **gebaut**, Test am echten TV offen |
+| 3 | Live Body Load: grobe, relative Beanspruchungszonen mit Konfidenz und Hinweis „geschätzt“ | **gebaut** (Heuristik, synthetisch geprüft) |
+| 4 | Inhalte: 20 Trainingsräume, 15 Avatare, 10 Ansichten | **gebaut** als stilisierte 2D-Fassung; 3D-Avatare erst mit lizenzierten Assets |
+| 5 | Weitere Übungen (Ausfallschritt, Hampelmann …) mit Zählung und Bewertung; Trainer-Avatar macht vor | geplant |
 
 ---
 

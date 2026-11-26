@@ -38,9 +38,10 @@
 14 Zara — Dance
 15 Echo — Challenges
 Rollen: Trainer, Spieler-Avatar oder Challenge-Gegner. Gemeinsames riggbares Skelett anstreben. Konzeptbilder sind keine riggbaren Modelle.
+Umsetzungsstand: 15 prozedural gezeichnete, stilisierte 2D-Avatare (ohne Gesichter) und 20 gezeichnete Räume; 3D-Avatare erst mit lizenzierten Assets.
 
 ## 10 Spiegelungsmodi
-01 Echtbild; 02 Silhouette; 03 Skelett; 04 Gittermodell; 05 Hologramm; 06 3D-Avatar; 07 Muskelansicht (schematische Beanspruchung); 08 Bewegungszonen (relative Beanspruchung/Bewegungsqualität getrennt); 09 Bewegungsspur; 10 Hybrid (Echtbild + Overlay).
+01 Echtbild; 02 Silhouette; 03 Skelett; 04 Gittermodell; 05 Hologramm; 06 3D-Avatar (Zielbild; umgesetzt als stilisierter 2D-Avatar); 07 Muskelansicht (schematische Beanspruchung); 08 Bewegungszonen (relative Beanspruchung/Bewegungsqualität getrennt); 09 Bewegungsspur; 10 Hybrid (Echtbild + Overlay).
 
 ## Priorität
 MVP: Core Studio, ein Trainer, Kniebeuge, Pose-Erkennung, lokale Silhouette und einfacher Avatar, Rep-Zähler, nachvollziehbare Punkte. Danach TV und Body Load; weitere Inhalte später.

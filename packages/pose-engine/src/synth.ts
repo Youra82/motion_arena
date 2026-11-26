@@ -30,6 +30,19 @@ export interface SynthOptions {
   noWorld?: boolean;
   /** Zusätzliche Drehung der Weltkoordinaten um die Hochachse (Grad). */
   worldYawDeg?: number;
+  /**
+   * Armhaltung: "forward" (Standard, waagerecht nach vorn), "down" (hängend) oder
+   * Seitheben in Grad (0 = hängend, 90 = waagerecht seitlich, 180 = über Kopf).
+   */
+  arms?: "forward" | "down" | number;
+  /** Beine seitlich gespreizt (Grad je Bein, z. B. Hampelmann). */
+  legSpreadDeg?: number;
+  /** Linkes Knie angehoben (Hüftbeugung in Grad) – Einbeinstand auf rechts. */
+  liftLeftKneeDeg?: number;
+  /** Ausfallschritt links vorn, 0..1 = Tiefe (1 ≈ vorderer Oberschenkel waagerecht). */
+  lunge?: number;
+  /** Ganzen Körper nach vorn kippen (Grad), z. B. 75 für eine Stütz-/Plank-Haltung. */
+  pitchDeg?: number;
 }
 
 const SHIN = 0.45;
@@ -81,12 +94,88 @@ function legChain(flexDeg: number, lat: number): { ankle: P3; knee: P3; hip: P3;
   };
 }
 
-export function synthPose(o: SynthOptions): { landmarks: Landmark[]; worldLandmarks: Landmark[] | null } {
-  const aspect = o.aspect ?? 9 / 16;
+/** Zweigliedrige Kette (Hüfte–Knie–Knöchel) in der Sagittalebene: Knie zeigt nach vorn. */
+function kneeBetween(hip: P3, ankle: P3, lat: number): P3 {
+  const dx = ankle.fwd - hip.fwd;
+  const dy = ankle.up - hip.up;
+  const len = Math.hypot(dx, dy) || 1e-6;
+  const d = Math.min(THIGH + SHIN - 1e-6, len);
+  const a = (THIGH * THIGH - SHIN * SHIN + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, THIGH * THIGH - a * a));
+  const ux = dx / len;
+  const uy = dy / len;
+  const px = hip.fwd + ux * a;
+  const py = hip.up + uy * a;
+  // Senkrechte so wählen, dass das Knie nach vorn zeigt
+  const c1 = { fwd: px - uy * h, up: py + ux * h };
+  const c2 = { fwd: px + uy * h, up: py - ux * h };
+  const k = c1.fwd >= c2.fwd ? c1 : c2;
+  return { lat, fwd: k.fwd, up: k.up };
+}
+
+type Leg = ReturnType<typeof legChain>;
+
+function legsFor(o: SynthOptions): { L: Leg; R: Leg } {
   const flexL = Math.max(0, o.kneeFlexDeg);
   const flexR = Math.max(0, o.kneeFlexDeg - (o.rightKneeOffsetDeg ?? 0));
-  const L = legChain(flexL, HIP_W / 2);
-  const R = legChain(flexR, -HIP_W / 2);
+  let L = legChain(flexL, HIP_W / 2);
+  let R = legChain(flexR, -HIP_W / 2);
+  if (o.lunge !== undefined) {
+    // Vorderes (linkes) Schienbein senkrecht, Oberschenkel je nach Tiefe bis waagerecht.
+    const th = (Math.min(1, Math.max(0, o.lunge)) * Math.PI) / 2;
+    const lat = HIP_W / 2;
+    const fAnkle: P3 = { lat, up: 0.08, fwd: 0.5 };
+    const fKnee: P3 = { lat, up: fAnkle.up + SHIN, fwd: 0.5 };
+    const hipUp = fKnee.up + THIGH * Math.cos(th);
+    const hipFwd = fKnee.fwd - THIGH * Math.sin(th);
+    L = {
+      ankle: fAnkle,
+      knee: fKnee,
+      hip: { lat, up: hipUp, fwd: hipFwd },
+      heel: { lat, up: 0.02, fwd: 0.44 },
+      toe: { lat, up: 0, fwd: 0.66 },
+    };
+    const bAnkle: P3 = { lat: -lat, up: 0.12, fwd: hipFwd - 0.62 };
+    const bHip: P3 = { lat: -lat, up: hipUp, fwd: hipFwd };
+    R = {
+      ankle: bAnkle,
+      knee: kneeBetween(bHip, bAnkle, -lat),
+      hip: bHip,
+      heel: { lat: -lat, up: 0.16, fwd: bAnkle.fwd - 0.05 },
+      toe: { lat: -lat, up: 0, fwd: bAnkle.fwd + 0.14 },
+    };
+  }
+  if (o.liftLeftKneeDeg) {
+    // Standbein rechts gestreckt, linkes Knie angehoben (Unterschenkel hängt senkrecht).
+    const h = (o.liftLeftKneeDeg * Math.PI) / 180;
+    const lat = HIP_W / 2;
+    const hip: P3 = { lat, up: R.hip.up, fwd: R.hip.fwd };
+    const knee: P3 = { lat, up: hip.up - THIGH * Math.cos(h), fwd: hip.fwd + THIGH * Math.sin(h) };
+    const ankle: P3 = { lat, up: knee.up - SHIN, fwd: knee.fwd };
+    L = {
+      ankle,
+      knee,
+      hip,
+      heel: { lat, up: ankle.up - 0.06, fwd: ankle.fwd - 0.06 },
+      toe: { lat, up: ankle.up - 0.08, fwd: ankle.fwd + 0.16 },
+    };
+  }
+  if (o.legSpreadDeg) {
+    // Beine seitlich abspreizen: seitlicher Versatz wächst mit dem Abstand unter der Hüfte.
+    const t = Math.tan((o.legSpreadDeg * Math.PI) / 180);
+    const spread = (leg: Leg, sign: number): Leg => {
+      const mv = (p: P3): P3 => ({ ...p, lat: p.lat + sign * Math.max(0, leg.hip.up - p.up) * t });
+      return { ankle: mv(leg.ankle), knee: mv(leg.knee), hip: leg.hip, heel: mv(leg.heel), toe: mv(leg.toe) };
+    };
+    L = spread(L, 1);
+    R = spread(R, -1);
+  }
+  return { L, R };
+}
+
+export function synthPose(o: SynthOptions): { landmarks: Landmark[]; worldLandmarks: Landmark[] | null } {
+  const aspect = o.aspect ?? 9 / 16;
+  const { L, R } = legsFor(o);
   const hipMid: P3 = { lat: 0, up: (L.hip.up + R.hip.up) / 2, fwd: (L.hip.fwd + R.hip.fwd) / 2 };
   const leanRad = ((0.55 * 0.6 * o.kneeFlexDeg + (o.extraLeanDeg ?? 0)) * Math.PI) / 180;
   const shoulderMid: P3 = {
@@ -97,12 +186,17 @@ export function synthPose(o: SynthOptions): { landmarks: Landmark[]; worldLandma
   const sh = (lat: number): P3 => ({ ...shoulderMid, lat });
   const ls = sh(SHOULDER_W / 2);
   const rs = sh(-SHOULDER_W / 2);
-  // Arme nach vorne gestreckt (Gegengewicht), leicht unter Schulterhöhe.
-  const armFwd = (s: P3, len: number): P3 => ({ lat: s.lat * 0.9, up: s.up - 0.05 * len, fwd: s.fwd + len });
-  const le = armFwd(ls, UPPER_ARM);
-  const re = armFwd(rs, UPPER_ARM);
-  const lw = armFwd(ls, UPPER_ARM + FOREARM);
-  const rw = armFwd(rs, UPPER_ARM + FOREARM);
+  // Arme: Standard nach vorne gestreckt (Gegengewicht), sonst hängend oder seitlich gehoben.
+  const arms = o.arms ?? "forward";
+  const arm = (s: P3, len: number, side: number): P3 => {
+    if (arms === "forward") return { lat: s.lat * 0.9, up: s.up - 0.05 * len, fwd: s.fwd + len };
+    const a = ((arms === "down" ? 8 : arms) * Math.PI) / 180;
+    return { lat: s.lat + side * len * Math.sin(a), up: s.up - len * Math.cos(a), fwd: s.fwd + 0.03 };
+  };
+  const le = arm(ls, UPPER_ARM, 1);
+  const re = arm(rs, UPPER_ARM, -1);
+  const lw = arm(ls, UPPER_ARM + FOREARM, 1);
+  const rw = arm(rs, UPPER_ARM + FOREARM, -1);
   const nose: P3 = {
     lat: 0,
     up: shoulderMid.up + 0.22 * Math.cos(leanRad),
@@ -132,6 +226,24 @@ export function synthPose(o: SynthOptions): { landmarks: Landmark[]; worldLandma
   for (const i of [17, 19, 21]) set(i, lw);
   for (const i of [18, 20, 22]) set(i, rw);
 
+  // Ganzen Körper um die Fußmitte nach vorn kippen (Stütz), danach wieder auf den Boden setzen.
+  if (o.pitchDeg) {
+    const pr = (o.pitchDeg * Math.PI) / 180;
+    const pivot = { up: 0.08, fwd: (L.ankle.fwd + R.ankle.fwd) / 2 };
+    for (let i = 0; i < pts.length; i++) {
+      const q = pts[i]!;
+      const du = q.up - pivot.up;
+      const df = q.fwd - pivot.fwd;
+      pts[i] = {
+        lat: q.lat,
+        up: pivot.up + du * Math.cos(pr) - df * Math.sin(pr),
+        fwd: pivot.fwd + du * Math.sin(pr) + df * Math.cos(pr),
+      };
+    }
+    const minUp = Math.min(...pts.map((q) => q.up));
+    if (minUp < 0) for (let i = 0; i < pts.length; i++) pts[i] = { ...pts[i]!, up: pts[i]!.up - minUp };
+  }
+
   const scale = (o.scale ?? 0.75) / BODY_H; // normalisierte Bildhöhe je Meter
   const cx = o.centerX ?? 0.5;
   const ground = o.groundY ?? 0.92;
@@ -158,14 +270,17 @@ export function synthPose(o: SynthOptions): { landmarks: Landmark[]; worldLandma
   // Weltkoordinaten kameraausgerichtet wie bei MediaPipe (x rechts im Bild, y unten, z von der Kamera weg),
   // Ursprung Hüftmitte; zusätzlich optional um die Hochachse gedreht.
   const yaw = ((o.view === "side" ? 90 : 0) + (o.worldYawDeg ?? 0)) * (Math.PI / 180);
+  const hl = pts[LM.LEFT_HIP]!;
+  const hr = pts[LM.RIGHT_HIP]!;
+  const hipC: P3 = { lat: (hl.lat + hr.lat) / 2, up: (hl.up + hr.up) / 2, fwd: (hl.fwd + hr.fwd) / 2 };
   const worldLandmarks: Landmark[] | null = o.noWorld
     ? null
     : pts.map((p, i) => {
-        const lat = p.lat - hipMid.lat;
-        const fwd = p.fwd - hipMid.fwd;
+        const lat = p.lat - hipC.lat;
+        const fwd = p.fwd - hipC.fwd;
         return {
           x: lat * Math.cos(yaw) + fwd * Math.sin(yaw),
-          y: -(p.up - hipMid.up),
+          y: -(p.up - hipC.up),
           z: lat * -Math.sin(yaw) + -fwd * Math.cos(yaw),
           visibility: landmarks[i]!.visibility,
         };

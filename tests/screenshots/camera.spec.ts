@@ -6,6 +6,8 @@ const dir = "docs/screenshots";
 test.use({
   launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] },
   permissions: ["camera"],
+  // Service Worker aus: sonst kommt das Modell aus dem Offline-Speicher und die Ladeanzeige ist nie zu sehen
+  serviceWorkers: "block",
 });
 
 test("Laden und Kamera-Ansichten", async ({ page }) => {

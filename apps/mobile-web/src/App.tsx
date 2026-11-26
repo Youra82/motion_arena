@@ -1,11 +1,53 @@
 import { useApp } from "./store";
-import { StartScreen } from "./screens/StartScreen";
+import { HomeScreen } from "./screens/HomeScreen";
+import { TrainingScreen } from "./screens/TrainingScreen";
+import { ProgressScreen } from "./screens/ProgressScreen";
+import { ProfileScreen } from "./screens/ProfileScreen";
 import { LiveScreen } from "./screens/LiveScreen";
 import { ResultScreen } from "./screens/ResultScreen";
+import { StudioScreen } from "./screens/StudioScreen";
+import { Suspense, lazy, useEffect, useRef } from "react";
+
+// TV-Bildschirm (mit QR-Erzeugung) nur bei Bedarf laden – auf dem Handy meist nie nötig.
+const TvScreen = lazy(() => import("./screens/TvScreen").then((m) => ({ default: m.TvScreen })));
 
 export function App() {
   const screen = useApp((s) => s.screen);
-  if (screen === "live") return <LiveScreen />;
-  if (screen === "result") return <ResultScreen />;
-  return <StartScreen />;
+  // Nach einem Seitenwechsel die neue Überschrift fokussieren (Tastatur/Screenreader verlieren sonst die Orientierung).
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const id = requestAnimationFrame(() => {
+      const h = document.querySelector<HTMLElement>("main h1, .live h1, h1");
+      if (!h) return;
+      if (!h.hasAttribute("tabindex")) h.setAttribute("tabindex", "-1");
+      h.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [screen]);
+  switch (screen) {
+    case "live":
+      return <LiveScreen />;
+    case "result":
+      return <ResultScreen />;
+    case "training":
+      return <TrainingScreen />;
+    case "progress":
+      return <ProgressScreen />;
+    case "profile":
+      return <ProfileScreen />;
+    case "studio":
+      return <StudioScreen />;
+    case "tv":
+      return (
+        <Suspense fallback={<div className="tv" />}>
+          <TvScreen />
+        </Suspense>
+      );
+    default:
+      return <HomeScreen />;
+  }
 }

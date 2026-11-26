@@ -74,3 +74,40 @@ test("PWA: Manifest und Icons sind eingebunden und erreichbar", async ({ page, r
   const apple = await page.locator('link[rel="apple-touch-icon"]').getAttribute("href");
   expect((await request.get(apple!)).ok()).toBe(true);
 });
+
+test("Startseite zeigt die Versionsnummer klein in der Ecke", async ({ page }) => {
+  await page.goto("/");
+  const v = page.locator(".app-version");
+  await expect(v).toBeVisible();
+  await expect(v).toHaveText(/^v\d+\.\d+\.\d+ · [0-9a-f]{7}$/);
+  const box = (await v.boundingBox())!;
+  expect(box.x + box.width).toBeGreaterThan(300); // rechts oben
+  expect(box.y).toBeLessThan(80);
+});
+
+test("Navigation: Fortschritt und Profil; Einstellungen bleiben nach Neuladen erhalten", async ({ page }) => {
+  await page.goto("/");
+  const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
+  await nav.getByRole("button", { name: "Fortschritt" }).click();
+  await expect(page.getByRole("heading", { name: "Fortschritt" })).toBeVisible();
+  await expect(page.getByText("Noch keine Trainings gespeichert")).toBeVisible();
+  await nav.getByRole("button", { name: "Profil" }).click();
+  await page.getByRole("button", { name: "Genauer (full)" }).click();
+  await page.reload();
+  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Profil" }).click();
+  await expect(page.getByRole("button", { name: "Genauer (full)" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Training", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Workouts" })).toBeVisible();
+});
+
+test("Analyse-Demo erkennt Stehen, Kniebeuge und Einbeinstand nacheinander; Beenden führt zur Startseite", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Analyse-Demo ohne Kamera" }).first().click();
+  const mv = page.locator(".analysis-movement");
+  await expect(mv).toHaveText("Stehen", { timeout: 5_000 });
+  await expect(mv).toHaveText("Kniebeuge", { timeout: 8_000 });
+  await expect(page.locator(".diagram-note")).toContainText("Oberschenkel");
+  await expect(mv).toHaveText("Einbeinstand", { timeout: 8_000 });
+  await page.getByRole("button", { name: "Analyse beenden" }).last().click();
+  await expect(page.getByRole("heading", { name: "Kniebeugen" })).toBeVisible();
+});

@@ -1,17 +1,30 @@
 import type { Landmark, PoseFrame } from "@motion-arena/shared";
 import { Calibrator, LandmarkSmoother, extractSquatFeatures } from "@motion-arena/pose-engine";
-import { DEFAULT_SQUAT_OPTIONS, SquatCounter, applySquatEvents, type SquatEvent } from "@motion-arena/motion-scoring";
-import { actions, showFeedback, useApp, type EngineError, type Source } from "../store";
+import {
+  BodyLoadAnalyzer,
+  DEFAULT_SQUAT_OPTIONS,
+  SquatCounter,
+  applySquatEvents,
+  type BodyLoadResult,
+  type SquatEvent,
+} from "@motion-arena/motion-scoring";
+import { actions, showFeedback, useApp, type EngineError, type Source, type ViewMode } from "../store";
 import { drawFrame } from "../render/draw";
+import { roomById } from "../render/rooms";
+import { avatarById } from "../render/avatars";
 import { DemoSource } from "./demo";
-import { PoseDetector } from "./landmarker";
+// MediaPipe erst beim Kameratraining laden (Start und Demo bleiben schlank).
+import type { PoseDetector } from "./landmarker";
 import { Recorder } from "./recorder";
+import { attachLiveCanvas, detachLiveCanvas, sendPoseToTv } from "../tv/phone-link";
 
 const HUD_INTERVAL_MS = 100;
 const COUNTDOWN_S = 3;
 const TRAIL_SAMPLE_MS = 90;
 const TRAIL_LEN = 10;
 const CANCELLED = Symbol("cancelled");
+/** Ansichten, die die Personenmaske brauchen (kostet Rechenzeit, daher nur dann). */
+const needsMask = (m: ViewMode) => m === "silhouette" || m === "hologramm";
 
 /**
  * Verbindet Quelle (Kamera oder Demo) → Pose-Erkennung → Merkmale → Kalibrierung/Zähler → Store,
@@ -28,6 +41,9 @@ export class LiveEngine {
   private readonly worldSmoother = new LandmarkSmoother();
   private calibrator = new Calibrator();
   private counter: SquatCounter | null = null;
+  /** Körperanalyse (Live Body Load) – im Analysemodus und für Muskel-/Zonen-Ansicht. */
+  private readonly bodyLoad = new BodyLoadAnalyzer();
+  private lastBodyLoad: BodyLoadResult | null = null;
   private lastHud = 0;
   private countdownStart = 0;
   /** Pause/Fortsetzen/Neukalibrieren erhöhen die Epoche → laufender Versuch wird verworfen. */
@@ -58,7 +74,15 @@ export class LiveEngine {
         await this.startCamera();
         if (this.stopped) throw CANCELLED;
         useApp.setState({ engineStatus: "loading-model" });
-        const det = new PoseDetector();
+        let det: PoseDetector;
+        try {
+          const { PoseDetector: Detector } = await import("./landmarker");
+          if (this.stopped) throw CANCELLED;
+          det = new Detector();
+        } catch (e) {
+          if (e === CANCELLED || this.stopped) throw CANCELLED;
+          throw { kind: "model-failed", message: `Pose-Erkennung konnte nicht geladen werden (${String(e)}).` } satisfies EngineError;
+        }
         this.detector = det;
         try {
           await det.init(useApp.getState().modelVariant);
@@ -68,15 +92,16 @@ export class LiveEngine {
         }
         // Wurde inzwischen abgebrochen, hat det.close() das spät geladene Modell bereits geschlossen.
         if (this.stopped) throw CANCELLED;
-        void det.setMask(useApp.getState().viewMode === "silhouette");
+        void det.setMask(needsMask(useApp.getState().viewMode));
         this.unsubscribe = useApp.subscribe((s, prev) => {
-          if (s.viewMode !== prev.viewMode) void this.detector?.setMask(s.viewMode === "silhouette");
+          if (s.viewMode !== prev.viewMode) void this.detector?.setMask(needsMask(s.viewMode));
         });
       } else {
-        this.demo = new DemoSource(performance.now());
+        this.demo = new DemoSource(performance.now(), useApp.getState().liveMode);
       }
       if (this.stopped) throw CANCELLED;
       useApp.setState({ engineStatus: "running" });
+      attachLiveCanvas(this.canvas); // gekoppelter Fernseher bekommt (mit Zustimmung) dasselbe Live-Bild
       this.lastEpoch = useApp.getState().motionEpoch;
       this.loop();
     } catch (e) {
@@ -141,6 +166,7 @@ export class LiveEngine {
 
   stop(): void {
     this.stopped = true;
+    detachLiveCanvas(this.canvas);
     cancelAnimationFrame(this.raf);
     if (this.videoCb && "cancelVideoFrameCallback" in this.video) this.video.cancelVideoFrameCallback(this.videoCb);
     if (this.goalTimer !== null) clearTimeout(this.goalTimer);
@@ -210,6 +236,8 @@ export class LiveEngine {
       aspect,
     };
     const features = extractSquatFeatures(smooth);
+    // Mit dem TV gekoppelt? Dann Gelenkpunkte (keine Bilder) weitergeben.
+    sendPoseToTv(smooth.landmarks, aspect, this.source === "camera" ? this.mirror : true, now);
     const state = useApp.getState();
 
     let depth: number | null = null;
@@ -217,7 +245,17 @@ export class LiveEngine {
     let armed = false;
     let issue: string[] | null = null;
 
-    if (state.stage === "calibrating") {
+    // Körperanalyse: läuft im Analysemodus und für die Ansichten, die sie darstellen.
+    const wantsBodyLoad = state.stage === "analysis" || state.viewMode === "muskel" || state.viewMode === "zonen";
+    if (wantsBodyLoad) this.lastBodyLoad = this.bodyLoad.update(smooth);
+    else if (this.lastBodyLoad) {
+      this.bodyLoad.reset();
+      this.lastBodyLoad = null;
+    }
+
+    if (state.stage === "analysis") {
+      // Kein Zählen, keine Kalibrierung – nur Analyse und Darstellung.
+    } else if (state.stage === "calibrating") {
       if (state.calibrationProgress === null && this.calibrator.calibration) this.calibrator.reset();
       const p = this.calibrator.update(features);
       useApp.setState({ calibrationProgress: p });
@@ -253,7 +291,9 @@ export class LiveEngine {
       }
     }
 
-    if (landmarks && now - this.lastTrail > TRAIL_SAMPLE_MS && smooth.landmarks) {
+    // Bewegungsspur nur pflegen, wenn sie angezeigt wird.
+    if (state.viewMode !== "spur") this.trail = [];
+    else if (landmarks && now - this.lastTrail > TRAIL_SAMPLE_MS && smooth.landmarks) {
       this.trail.push(smooth.landmarks);
       if (this.trail.length > TRAIL_LEN) this.trail.shift();
       this.lastTrail = now;
@@ -264,7 +304,9 @@ export class LiveEngine {
     while (this.fpsFrames.length && now - this.fpsFrames[0]! > 1000) this.fpsFrames.shift();
     if (now - this.lastHud > HUD_INTERVAL_MS) {
       this.lastHud = now;
-      useApp.setState({ hud: { depth, phase, armed, issue, quality: features.quality, fps: this.fpsFrames.length } });
+      useApp.setState({
+        hud: { depth, phase, armed, issue, quality: features.quality, fps: this.fpsFrames.length, bodyLoad: this.lastBodyLoad },
+      });
     }
 
     const ctx = this.canvas.getContext("2d");
@@ -276,15 +318,20 @@ export class LiveEngine {
           ch: this.canvas.height,
           sw: this.source === "camera" ? this.video.videoWidth || 1280 : 900,
           sh: this.source === "camera" ? this.video.videoHeight || 720 : 1600,
-          mirror: this.source === "camera" && this.mirror,
+          // Kamera: Selfie-Spiegelung (nur Frontkamera); Demo ebenfalls gespiegelt, damit links = links wie im Körperschema.
+          mirror: this.source === "camera" ? this.mirror : true,
           // Ganzes ausgewertetes Bild zeigen (contain), damit sichtbar = erkannt – auch im Querformat.
           fit: "contain",
         },
         mode: state.viewMode,
+        room: roomById(state.settings.room),
+        avatar: avatarById(state.settings.avatar),
         video: this.source === "camera" ? this.video : null,
         landmarks: smooth.landmarks,
-        mask: state.viewMode === "silhouette" ? this.mask : null,
+        mask: needsMask(state.viewMode) ? this.mask : null,
         trail: state.viewMode === "spur" ? this.trail : [],
+        bodyLoad: this.lastBodyLoad,
+        jointSpeeds: wantsBodyLoad ? this.bodyLoad.jointSpeeds() : null,
         ring: { depth, goodDepth: DEFAULT_SQUAT_OPTIONS.goodDepth, repFlashAt: this.repFlashAt, now },
       });
     }
