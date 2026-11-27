@@ -59,9 +59,45 @@ export function initPwa(): void {
   // Mit selbstsigniertem Zertifikat lehnt der Browser ihn ab – die App läuft dann trotzdem.
   if (import.meta.env.PROD && "serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
+      navigator.serviceWorker
+        .register(`${import.meta.env.BASE_URL}sw.js`)
+        .then((reg) => {
+          // Beim Zurückkehren in die App (iOS hält sie im Hintergrund) nach einer neuen Version fragen
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") reg.update().catch(() => {});
+          });
+        })
+        .catch(() => {});
     });
+    watchForUpdate();
   }
+}
+
+/** Läuft gerade ein Live-Training? Dann nicht neu laden. */
+const inLiveTraining = () => !!document.querySelector(".live");
+
+/**
+ * Neue Version übernommen (neuer Service Worker steuert die Seite) → einmal neu laden, damit die neue Oberfläche
+ * erscheint. Nie mitten im Live-Training: dann erst, sobald es vorbei ist.
+ */
+function watchForUpdate(): void {
+  const sw = navigator.serviceWorker;
+  const hadController = !!sw.controller; // Erstinstallation: kein Neuladen nötig
+  let pending = false;
+  let reloading = false;
+  const reload = () => {
+    if (reloading) return;
+    reloading = true;
+    location.reload();
+  };
+  sw.addEventListener("controllerchange", () => {
+    if (!hadController) return;
+    if (inLiveTraining()) pending = true;
+    else reload();
+  });
+  setInterval(() => {
+    if (pending && !inLiveTraining()) reload();
+  }, 2000);
 }
 
 /** Installationsdialog des Browsers öffnen (nur nach Nutzeraktion erlaubt). */

@@ -106,9 +106,10 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
   if (req.mode === "navigate") {
-    // Seite: erst Netz (Aktualisierungen), offline aus dem Speicher.
+    // Seite: erst Netz (Aktualisierungen), offline aus dem Speicher. "no-cache": am HTTP-Zwischenspeicher
+    // vorbei beim Server nachfragen (GitHub Pages erlaubt sonst 10 Minuten alte Seiten → alte Version).
     event.respondWith(
-      fetch(req)
+      fetch(req, { cache: "no-cache" })
         .then((res) => {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put("./", copy));
