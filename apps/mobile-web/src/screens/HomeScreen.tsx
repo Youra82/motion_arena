@@ -9,6 +9,7 @@ import { roomBackdrop } from "../render/concept-art";
 import { usePhoneLink } from "../tv/phone-link";
 import { VERSION_LABEL } from "../version";
 import { programView } from "../program/view";
+import { CardDeck, type DeckOption } from "../components/CardDeck";
 
 const base = import.meta.env.BASE_URL;
 
@@ -104,42 +105,13 @@ export function HomeScreen() {
             Mit {trainer.name} · {roomName}
           </p>
           {(() => {
-            // Hauptkarte vorn, weitere Möglichkeiten als Karten dahinter gestapelt (jede ragt als Knopfstreifen hervor)
-            const primary = running
-              ? { title: "Training fortsetzen", sub: `${running.title} · Übung ${running.index + 1} von ${running.steps.length}`, icon: ICONS.play, run: () => actions.openWorkout() }
-              : view && !view.finished
-                ? { title: `Weiter: ${view.next.title}`, sub: `${view.name} · Woche ${view.week} · Tag ${view.dayInWeek} · ${view.next.minutes} Min`, icon: ICONS.play, run: () => actions.startProgramSession() }
-                : { title: "Training wählen", sub: "Übungen und Programme", icon: ICONS.next, run: () => actions.navigate("training") };
-            const extras: Array<{ label: string; icon: string; run: () => void }> = [];
-            if (restart) extras.push({ label: restart.label, icon: ICONS.restart, run: restart.run });
-            if (running || (view && !view.finished)) extras.push({ label: "Anderes Training", icon: ICONS.next, run: () => actions.navigate("training") });
-            return (
-              <div className="nx-stack" style={{ height: 76 + extras.length * 50 }}>
-                <button className="nx-start nx-stack-main" onClick={primary.run}>
-                  <span className="nx-start-icon">
-                    <Icon d={primary.icon} size={16} />
-                  </span>
-                  <span className="nx-stack-text">
-                    <b>{primary.title}</b>
-                    <small>{primary.sub}</small>
-                  </span>
-                </button>
-                {extras
-                  .map((x, i) => (
-                    <button
-                      key={x.label}
-                      className="nx-stack-card"
-                      style={{ top: 50 * (i + 1), zIndex: 5 - (i + 1), transform: `scale(${(1 - 0.045 * (i + 1)).toFixed(3)})` }}
-                      onClick={x.run}
-                    >
-                      <span className="nx-stack-icon">
-                        <Icon d={x.icon} size={15} />
-                      </span>
-                      {x.label}
-                    </button>
-                  ))}
-              </div>
-            );
+            // Kartenstapel wie bei Apple: vorn die nächste sinnvolle Möglichkeit, dahinter die anderen – wischen dreht
+            const options: DeckOption[] = [];
+            if (running) options.push({ title: "Training fortsetzen", sub: `${running.title} · Übung ${running.index + 1} von ${running.steps.length}`, icon: ICONS.play, run: () => actions.openWorkout() });
+            else if (view && !view.finished) options.push({ title: `Weiter: ${view.next.title}`, sub: `${view.name} · Woche ${view.week} · Tag ${view.dayInWeek} · ${view.next.minutes} Min`, icon: ICONS.play, run: () => actions.startProgramSession() });
+            if (restart) options.push({ title: restart.label, icon: ICONS.restart, run: restart.run });
+            options.push({ title: running || (view && !view.finished) ? "Anderes Training" : "Training wählen", sub: "Übungen und Programme", icon: ICONS.next, run: () => actions.navigate("training") });
+            return <CardDeck options={options} />;
           })()}
         </div>
       </section>
