@@ -107,7 +107,7 @@ export function HomeScreen() {
           {(() => {
             // Kartenstapel wie bei Apple: vorn die nächste sinnvolle Möglichkeit, dahinter die anderen – wischen dreht
             const options: DeckOption[] = [];
-            if (running) options.push({ title: "Training fortsetzen", sub: `${running.title} · Übung ${running.index + 1} von ${running.steps.length}`, icon: ICONS.play, run: () => actions.openWorkout() });
+            if (running) options.push({ title: "Training fortsetzen", sub: running.steps.length === 1 ? `${running.title} · Satz ${running.steps[0]!.setsDone + 1} von ${running.steps[0]!.sets}` : `${running.title} · Übung ${running.index + 1} von ${running.steps.length}`, icon: ICONS.play, run: () => actions.openWorkout() });
             else if (view && !view.finished) options.push({ title: `Weiter: ${view.next.title}`, sub: `${view.name} · Woche ${view.week} · Tag ${view.dayInWeek} · ${view.next.minutes} Min`, icon: ICONS.play, run: () => actions.startProgramSession() });
             if (restart) options.push({ title: restart.label, icon: ICONS.restart, run: restart.run });
             options.push({ title: running || (view && !view.finished) ? "Anderes Training" : "Training wählen", sub: "Übungen und Programme", icon: ICONS.next, run: () => actions.navigate("training") });

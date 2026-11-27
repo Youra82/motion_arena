@@ -116,7 +116,7 @@ export function TrainingScreen() {
                           ))}
                         </div>
                       </div>
-                      <button className="btn btn-primary nx-wide" onClick={() => actions.openLive("camera", target)}>
+                      <button className="btn btn-primary nx-wide" onClick={() => actions.startSquat(target)}>
                         ▶ Training starten
                       </button>
                       {SHOW_DEMO && (
@@ -124,7 +124,7 @@ export function TrainingScreen() {
                           Demo ohne Kamera ansehen
                         </button>
                       )}
-                      <p className="muted small">Die Kamera zählt Wiederholungen und bewertet Tiefe, Tempo, Gleichmäßigkeit und Haltung (geschätzt).</p>
+                      <p className="muted small">3 Sätze à {target} – die Kamera zählt Wiederholungen und bewertet Tiefe, Tempo, Gleichmäßigkeit und Haltung (geschätzt).</p>
                     </>
                   ) : (
                     <>

@@ -358,6 +358,13 @@ export const actions = {
     const step: Step = e.measure === "reps" ? { exerciseId, sets: 3, reps: 10 } : { exerciseId, sets: 2, seconds: 30 };
     useApp.setState({ workout: toRun("single", e.name, [step]), screen: "workout", error: null, engineStatus: "idle" });
   },
+  /** Kniebeugen mit Kamera als eigenes Training (3 Sätze) starten – so lässt es sich auf der Startseite fortsetzen. */
+  startSquat(target: number) {
+    const e = exerciseById("squat");
+    if (!e) return;
+    useApp.setState({ workout: toRun("single", e.name, [{ exerciseId: "squat", sets: 3, reps: target }]), error: null });
+    actions.openLive("camera", target);
+  },
   /** Übung ans eigene Training anhängen und den Baukasten öffnen. */
   addToCustom(exerciseId: string) {
     const e = exerciseById(exerciseId);
