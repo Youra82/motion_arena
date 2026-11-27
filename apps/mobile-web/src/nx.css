@@ -247,6 +247,59 @@
   color: #ff8a6a;
 }
 
+/* Trainer & Arena vor dem Training */
+.stage-card {
+  position: relative;
+  min-height: 236px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--s2);
+  padding: var(--s3);
+  border: 1px solid rgba(244, 242, 236, 0.1);
+}
+.stage-card-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -2;
+}
+.stage-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(0deg, rgba(10, 20, 24, 0.92) 0%, rgba(10, 20, 24, 0.2) 55%, rgba(10, 20, 24, 0) 100%);
+}
+.stage-card-trainer {
+  position: absolute;
+  right: 4%;
+  bottom: 8px;
+  height: 88%;
+  z-index: -1;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
+}
+.stage-card-title {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 18px;
+  font-weight: 800;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  max-width: 60%;
+}
+.stage-card-title small {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7fe6e2;
+}
+
 /* Wischen zum Löschen (iOS-Art) */
 .swipe-row {
   position: relative;
@@ -1618,4 +1671,9 @@
   .nx-hub {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+
+/* Im Baukasten die Beschriftung (Trainer/Ich/Arena) immer zeigen */
+.stage-card .stage-chip small {
+  display: block;
 }

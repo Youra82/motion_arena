@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { AVATARS, avatarById } from "../render/avatars";
 import { ROOMS, isRoomId, roomById } from "../render/rooms";
-import { conceptArt } from "../render/concept-art";
+import { conceptArt, roomBackdrop } from "../render/concept-art";
+import { trainerPhoto } from "./common";
 import { ARENA_ROOMS, isArenaRoom } from "../arena/rooms";
 import { actions, useApp } from "../store";
 
@@ -39,6 +40,41 @@ export function StagePicker() {
       </div>
       {open && <PickerDialog kind={open} onClose={() => setOpen(null)} />}
     </>
+  );
+}
+
+/**
+ * Vorschau-Karte vor dem Training (z. B. im Baukasten): gewählter Trainer im gewählten Raum, darunter dieselben drei
+ * Auswahl-Knöpfe wie im Live-Training. Die Wahl gilt sofort für das nächste Training.
+ */
+export function StageCard() {
+  const settings = useApp((s) => s.settings);
+  const [open, setOpen] = useState<Kind | null>(null);
+  const trainer = avatarById(settings.trainer);
+  const lebombo = settings.arenaRoom === "lebombo";
+  const room = roomById(settings.room);
+  const roomLabel = lebombo ? ARENA_ROOMS.find((r) => r.id === "lebombo")?.label ?? "Lebombo" : room.name;
+  const backdrop = lebombo ? `${import.meta.env.BASE_URL}arena/lebombo.jpg` : roomBackdrop(room.nr);
+  return (
+    <section className="stage-card" aria-label="Trainer und Arena für dieses Training">
+      <img className="stage-card-bg" src={backdrop} alt="" />
+      <img className="stage-card-trainer" src={trainerPhoto(trainer.id)} alt={`Trainer ${trainer.name} in ${roomLabel}`} />
+      <p className="stage-card-title">
+        <small>Trainer &amp; Arena</small>
+        {trainer.name} · {roomLabel}
+      </p>
+      <div className="stage-picker" role="group" aria-label="Trainer und Arena wählen">
+        <button className="stage-chip" onClick={() => setOpen("trainer")} aria-label={`Trainer: ${trainer.name} – ändern`}>
+          <img src={conceptArt("avatars", trainer.nr)} alt="" />
+          <span><small>Trainer</small>{trainer.name}</span>
+        </button>
+        <button className="stage-chip" onClick={() => setOpen("room")} aria-label={`Arena: ${roomLabel} – ändern`}>
+          {!lebombo && <img src={conceptArt("rooms", room.nr)} alt="" className="wide" />}
+          <span><small>Arena</small>{roomLabel}</span>
+        </button>
+      </div>
+      {open && <PickerDialog kind={open} onClose={() => setOpen(null)} />}
+    </section>
   );
 }
 

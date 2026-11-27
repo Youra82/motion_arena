@@ -115,3 +115,18 @@ test("Programme: „Fertig wählen“ zeigt die Programme, aktives Programm per 
   await programme(page);
   await expect(page.getByRole("button", { name: "Programm Kraft-Start löschen" })).toHaveCount(0);
 });
+
+test("Baukasten: Trainer und Arena vor dem Training wählen", async ({ page }) => {
+  await programme(page);
+  await page.getByRole("button", { name: /Selbst bauen/ }).click();
+  const card = page.getByRole("region", { name: "Trainer und Arena für dieses Training" });
+  await card.getByRole("button", { name: /^Arena: .* – ändern/ }).click();
+  await page.getByRole("dialog", { name: "Arena wählen" }).getByRole("button", { name: /Neon Arena/ }).click();
+  await card.getByRole("button", { name: /^Trainer: .* – ändern/ }).click();
+  await page.getByRole("dialog", { name: "Trainer wählen" }).getByRole("button", { name: /Sara/ }).click();
+  await expect(card.getByRole("img", { name: "Trainer Sara in Neon Arena" })).toBeVisible();
+  await page.reload();
+  await programme(page);
+  await page.getByRole("button", { name: /Selbst bauen/ }).click();
+  await expect(page.getByRole("button", { name: "Trainer: Sara – ändern" })).toBeVisible();
+});

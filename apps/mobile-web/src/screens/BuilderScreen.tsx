@@ -4,6 +4,7 @@ import { actions, useApp } from "../store";
 import { EXERCISES, exerciseById } from "../program/catalog";
 import { sessionMinutes, type Step } from "../program/planner";
 import type { CustomWorkout } from "../persist";
+import { StageCard } from "../components/StagePicker";
 
 const DEFAULT: CustomWorkout = {
   name: "Mein Training",
@@ -97,6 +98,8 @@ export function BuilderScreen() {
           );
         })}
       </ol>
+
+      <StageCard />
 
       <section aria-labelledby="hinzufuegen">
         <h2 id="hinzufuegen" className="nx-section-title">
