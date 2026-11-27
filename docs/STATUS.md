@@ -62,6 +62,10 @@ Gesamt: **242 Vitest-Tests grün** (eigene + Codex-Tests aus 5 Runden), 1 Aufnah
 - Frontal ist der Kniewinkel nur über MediaPipe-Weltkoordinaten bestimmbar. Am genauesten: leicht schräg oder seitlich.
 - **3D-Figuren:** animiert ist bisher nur Trainer Lukas (CC0-Grundmodell); die übrigen Avatare sind Porträtkarten. Ohne Bildfreigabe zeigt der Fernseher Kamera-Ansichten (Echtbild, Hybrid, Silhouette) als Skelett.
 - Nur die Übung Kniebeuge wird gezählt und bewertet.
+- **Programme (v0.3):** Der Planer (`src/program/planner.ts`) baut aus 6 Antworten ein 6–8-Wochen-Programm
+  (Phasen Grundlage/Aufbau/Steigerung, Ersatzübungen bei Knie-/Rücken-/Schulterbeschwerden, Dauer passend zur
+  gewünschten Zeit). Kniebeugen laufen darin mit Kamera-Zählung; alle anderen Übungen sind geführte Schritte mit
+  Anleitung und Timer, die von Hand abgehakt werden. Gespeichert werden nur Antworten und Fortschritt (Gerät).
 - Der Verlauf hält höchstens 1000 Trainings; Kennzahlen beziehen sich auf den gespeicherten Verlauf.
 
 ## Nächste Schritte

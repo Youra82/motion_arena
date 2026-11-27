@@ -38,6 +38,7 @@ test("Lokale Kopplung überträgt Live-Werte, Analyse, Demo-Kennzeichnung und Ho
   await expect(tv.locator(".tv-result .tv-result-grid b").nth(0)).toHaveText(new RegExp(`^${reps}\\s*/\\s*${target}$`));
   await expect(tv.locator(".tv-result .tv-result-grid b").nth(1)).toHaveText(await phone.locator(".stat-value").nth(1).innerText());
   await phone.getByRole("button", { name: "Zur Startseite" }).click();
+  await phone.getByRole("button", { name: "Körperanalyse" }).click();
   await phone.getByRole("button", { name: "Analyse-Demo ohne Kamera" }).click();
   await expect.poll(async () => {
     const [handy, fernseher] = await Promise.all([phone, tv].map(async (page) => {

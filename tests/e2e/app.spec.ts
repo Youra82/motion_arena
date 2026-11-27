@@ -96,12 +96,13 @@ test("Navigation: Fortschritt und Profil; Einstellungen bleiben nach Neuladen er
   await page.reload();
   await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Profil" }).click();
   await expect(page.getByRole("button", { name: "Genauer (full)" })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Training", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Workouts" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Übungen", level: 1 })).toBeVisible();
 });
 
 test("Analyse-Demo erkennt Stehen, Kniebeuge und Einbeinstand nacheinander; Beenden führt zur Startseite", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Körperanalyse" }).click();
   await page.getByRole("button", { name: "Analyse-Demo ohne Kamera" }).first().click();
   const mv = page.locator(".analysis-movement");
   await expect(mv).toHaveText("Stehen", { timeout: 5_000 });

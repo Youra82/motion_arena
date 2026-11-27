@@ -5,6 +5,7 @@ import { initPwa } from "./pwa";
 import { useApp } from "./store";
 import { connectToTv } from "./tv/phone-link";
 import "./styles.css";
+import "./nx.css";
 
 initPwa();
 

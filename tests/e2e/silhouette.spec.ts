@@ -82,6 +82,7 @@ test("Körperanalyse mit Personenbild (Krieger-II-Haltung): Ausfallschritt, vord
   const ctx = await browser.newContext({ permissions: ["camera"], viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
   await page.goto(baseURL!);
+  await page.getByRole("button", { name: "Körperanalyse" }).click();
   await page.getByRole("button", { name: "Analyse starten" }).first().click();
   await expect(page.getByText("Erkennung gut")).toBeVisible({ timeout: 60_000 });
   await expect(page.locator(".analysis-movement")).toHaveText("Ausfallschritt", { timeout: 10_000 });

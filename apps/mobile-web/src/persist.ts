@@ -3,6 +3,8 @@ import { isViewMode, type ViewMode } from "./view-modes";
 import { DEFAULT_ROOM, isRoomId } from "./render/rooms";
 import { DEFAULT_AVATAR, isAvatarId } from "./render/avatars";
 import { ARENA_ROOMS, isArenaRoom, type ArenaRoom } from "./arena/rooms";
+import { isAnswers, type Answers, type Step } from "./program/planner";
+import { exerciseById } from "./program/catalog";
 
 /**
  * Speicherung auf dem Gerät (localStorage). Nichts wird übertragen.
@@ -126,6 +128,72 @@ export function loadSettings(): Settings {
 
 export function saveSettings(s: Settings): boolean {
   return write(SETTINGS_KEY, s);
+}
+
+/**
+ * Aktives Programm: gespeichert werden nur die Antworten und der Fortschritt – der Plan selbst wird daraus jedes
+ * Mal neu berechnet (createPlan), so bleiben gespeicherte Daten klein und immer zur aktuellen Planer-Version passend.
+ */
+const PROGRAM_KEY = "motion-arena.program.v1";
+const CUSTOM_KEY = "motion-arena.custom.v1";
+
+export interface StoredProgram {
+  answers: Answers;
+  /** Abgeschlossene Einheiten. */
+  done: number;
+  /** −1 leichter, 0 normal, +1 fordernder („Passt es so?“). */
+  adjust: -1 | 0 | 1;
+  startedAt: string;
+  /** Eigener Name (fertige Programme), sonst der Name aus dem Ziel. */
+  name?: string;
+}
+
+export interface CustomWorkout {
+  name: string;
+  steps: Step[];
+}
+
+export function loadProgram(): StoredProgram | null {
+  const v = read<Record<string, unknown>>(PROGRAM_KEY);
+  if (!v || typeof v !== "object" || !isAnswers(v.answers)) return null;
+  const done = Number.isInteger(v.done) && (v.done as number) >= 0 ? (v.done as number) : 0;
+  const adjust = v.adjust === -1 || v.adjust === 1 ? v.adjust : 0;
+  const startedAt = typeof v.startedAt === "string" && Number.isFinite(Date.parse(v.startedAt)) ? v.startedAt : new Date(0).toISOString();
+  const name = typeof v.name === "string" && v.name.trim() ? v.name.slice(0, 40) : undefined;
+  return { answers: v.answers, done, adjust, startedAt, ...(name ? { name } : {}) };
+}
+
+/** null entfernt das Programm. */
+export function saveProgram(p: StoredProgram | null): boolean {
+  if (p) return write(PROGRAM_KEY, p);
+  try {
+    const st = storage();
+    if (!st || st === "denied") return false;
+    st.removeItem(PROGRAM_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const isStep = (s: unknown): s is Step => {
+  if (!s || typeof s !== "object") return false;
+  const x = s as Record<string, unknown>;
+  const e = typeof x.exerciseId === "string" ? exerciseById(x.exerciseId) : undefined;
+  if (!e || !Number.isInteger(x.sets) || (x.sets as number) < 1 || (x.sets as number) > 6) return false;
+  if (e.measure === "reps") return Number.isInteger(x.reps) && (x.reps as number) >= 1 && (x.reps as number) <= 50;
+  return Number.isInteger(x.seconds) && (x.seconds as number) >= 5 && (x.seconds as number) <= 300;
+};
+
+export function loadCustom(): CustomWorkout | null {
+  const v = read<Record<string, unknown>>(CUSTOM_KEY);
+  if (!v || typeof v !== "object" || typeof v.name !== "string" || !Array.isArray(v.steps)) return null;
+  const steps = v.steps.filter(isStep).slice(0, 12);
+  return steps.length ? { name: v.name.slice(0, 40) || "Mein Training", steps } : null;
+}
+
+export function saveCustom(c: CustomWorkout): boolean {
+  return write(CUSTOM_KEY, c);
 }
 
 /**

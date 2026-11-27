@@ -5,6 +5,8 @@ export function ResultScreen() {
   const session = useApp((s) => s.session);
   const source = useApp((s) => s.source);
   const s = summarize(session);
+  // Teil eines laufenden Trainings (Programm/eigenes Training)? Dann geht es von hier zur nächsten Übung.
+  const inWorkout = useApp((st) => !!st.workout && st.workout.index < st.workout.steps.length);
 
   const stats: Array<[string, string]> = [
     ["Wiederholungen", `${s.reps} / ${s.targetReps}`],
@@ -53,7 +55,12 @@ export function ResultScreen() {
       )}
 
       <div className="actions">
-        <button className="btn btn-primary" onClick={() => actions.openLive(source, session.targetReps)}>
+        {inWorkout && (
+          <button className="btn btn-primary" onClick={() => actions.returnToWorkout(s.reps > 0 && source === "camera")}>
+            {s.reps > 0 && source === "camera" ? "Satz zählen · weiter im Training" : "Zurück zum Training"}
+          </button>
+        )}
+        <button className={inWorkout ? "btn btn-ghost" : "btn btn-primary"} onClick={() => actions.openLive(source, session.targetReps)}>
           Nochmal
         </button>
         <button className="btn btn-ghost" onClick={() => actions.home()}>

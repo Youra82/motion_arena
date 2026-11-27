@@ -6,6 +6,11 @@ import { ProfileScreen } from "./screens/ProfileScreen";
 import { LiveScreen } from "./screens/LiveScreen";
 import { ResultScreen } from "./screens/ResultScreen";
 import { StudioScreen } from "./screens/StudioScreen";
+import { ProgramsScreen } from "./screens/ProgramsScreen";
+import { PlannerScreen } from "./screens/PlannerScreen";
+import { ProgramScreen } from "./screens/ProgramScreen";
+import { BuilderScreen } from "./screens/BuilderScreen";
+import { WorkoutScreen } from "./screens/WorkoutScreen";
 import { Suspense, lazy, useEffect, useRef } from "react";
 
 // TV-Bildschirm (mit QR-Erzeugung) nur bei Bedarf laden – auf dem Handy meist nie nötig.
@@ -20,6 +25,7 @@ export function App() {
       first.current = false;
       return;
     }
+    window.scrollTo({ top: 0 });
     const id = requestAnimationFrame(() => {
       const h = document.querySelector<HTMLElement>("main h1, .live h1, h1");
       if (!h) return;
@@ -41,6 +47,16 @@ export function App() {
       return <ProfileScreen />;
     case "studio":
       return <StudioScreen />;
+    case "programs":
+      return <ProgramsScreen />;
+    case "planner":
+      return <PlannerScreen />;
+    case "program":
+      return <ProgramScreen />;
+    case "builder":
+      return <BuilderScreen />;
+    case "workout":
+      return <WorkoutScreen />;
     case "tv":
       return (
         <Suspense fallback={<div className="tv" />}>

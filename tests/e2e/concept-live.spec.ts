@@ -24,6 +24,7 @@ test("Muskelansicht und Bewegungszonen rendern dieselbe laufende 3D-Pose", async
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto("/");
+  await page.getByRole("button", { name: "Körperanalyse" }).click();
   await page.getByRole("button", { name: "Analyse-Demo ohne Kamera" }).click();
   const canvas = page.getByLabel("Live-Ansicht mit Körpererkennung");
   await expect(canvas).toHaveAttribute("data-live-visual", "muskel", { timeout: 25_000 });

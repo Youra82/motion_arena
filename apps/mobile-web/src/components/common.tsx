@@ -100,11 +100,13 @@ export function HeroFigure() {
   return <canvas ref={ref} className="hero-figure" aria-hidden="true" />;
 }
 
-const NAV: Array<{ id: Exclude<Screen, "live" | "result" | "tv">; label: string; icon: string }> = [
-  { id: "home", label: "Start", icon: "M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
-  { id: "training", label: "Training", icon: "M2 12h3M19 12h3M5 8v8M19 8v8M8 6v12M16 6v12M8 12h8" },
+type NavId = Exclude<Screen, "live" | "result" | "tv">;
+const NAV: Array<{ id: NavId; label: string; icon: string; also?: NavId[] }> = [
+  { id: "home", label: "Heute", icon: "M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z", also: ["workout"] },
+  { id: "programs", label: "Programme", icon: "M4 5h16v15H4zM4 10h16M9 3v4M15 3v4", also: ["planner", "program", "builder"] },
+  { id: "training", label: "Übungen", icon: "M2 12h3M19 12h3M5 8v8M19 8v8M8 6v12M16 6v12M8 12h8" },
   { id: "progress", label: "Fortschritt", icon: "M5 20V13M10 20V8M15 20v-5M20 20V4" },
-  { id: "profile", label: "Profil", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" },
+  { id: "profile", label: "Profil", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0", also: ["studio"] },
 ];
 
 function NavIcon({ d }: { d: string }) {
@@ -115,28 +117,52 @@ function NavIcon({ d }: { d: string }) {
   );
 }
 
-/** Untere Navigation: Start · Training · [Live] · Fortschritt · Profil. */
+/** Untere Navigation: Heute · Programme · Übungen · Fortschritt · Profil. */
 export function BottomNav() {
   const screen = useApp((s) => s.screen);
-  const target = useApp((s) => s.targetReps);
-  const items = NAV.map((n) => (
-    <button key={n.id} className="nav-item" aria-current={screen === n.id ? "page" : undefined} onClick={() => actions.navigate(n.id)}>
-      <NavIcon d={n.icon} />
-      <span>{n.label}</span>
-    </button>
-  ));
   return (
     <nav className="bottom-nav" aria-label="Hauptnavigation">
-      {items.slice(0, 2)}
-      <button className="nav-live" aria-label="Live-Training starten" onClick={() => actions.openLive("camera", target)}>
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-          <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
-        </svg>
-      </button>
-      {items.slice(2)}
+      {NAV.map((n) => {
+        const here = screen === n.id || !!n.also?.includes(screen as NavId);
+        return (
+          <button key={n.id} className="nav-item" aria-current={here ? "page" : undefined} onClick={() => actions.navigate(n.id)}>
+            <NavIcon d={n.icon} />
+            <span>{n.label}</span>
+          </button>
+        );
+      })}
     </nav>
   );
 }
+
+/** Freigestelltes Foto eines Trainers (Kniebeuge, aus der Figuren-Werkstatt). */
+export const trainerPhoto = (id: string) => `${import.meta.env.BASE_URL}menu/figures/${id}.webp`;
+
+/** Einfaches Linien-Symbol (eigene Pfade, keine Fremd-Icons). */
+export function Icon({ d, size = 22, className = "" }: { d: string; size?: number; className?: string }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  );
+}
+
+export const ICONS = {
+  back: "M15 5l-7 7 7 7",
+  close: "M6 6l12 12M18 6 6 18",
+  next: "M9 5l7 7-7 7",
+  play: "M7 4v16l13-8z",
+  sparkle: "M12 3l1.8 4.7L18.5 9l-4.7 1.8L12 15.5l-1.8-4.7L5.5 9l4.7-1.3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z",
+  blocks: "M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM17 14v6M14 17h6",
+  list: "M4 6h16M4 12h16M4 18h10",
+  analysis: "M3 12h4l2-6 4 12 2-6h6",
+  studio: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 21a7 7 0 0 1 14 0",
+  tv: "M3 5h18v12H3zM8 21h8M12 17v4",
+  check: "M5 12l5 5 9-10",
+  camera: "M4 8h3l2-3h6l2 3h3v11H4zM12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+  timer: "M12 8v5l3 2M9 2h6M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z",
+  search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4",
+};
 
 /** Rahmen für die Hauptbereiche: Inhalt + untere Navigation. */
 export function MainLayout({ children, className = "" }: { children: React.ReactNode; className?: string }) {

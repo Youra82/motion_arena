@@ -13,10 +13,57 @@ import {
   type BodyLoadResult,
   type TrainingEntry,
 } from "@motion-arena/motion-scoring";
-import { DEFAULT_SETTINGS, clearAll, loadHistory, loadSettings, saveHistory, saveSettings, type Settings } from "./persist";
+import {
+  DEFAULT_SETTINGS,
+  clearAll,
+  loadCustom,
+  loadHistory,
+  loadProgram,
+  loadSettings,
+  saveCustom,
+  saveHistory,
+  saveProgram,
+  saveSettings,
+  type CustomWorkout,
+  type Settings,
+  type StoredProgram,
+} from "./persist";
+import { createPlan, sessionAt, totalSessions, type Answers, type Step } from "./program/planner";
+import { exerciseById } from "./program/catalog";
 
-/** Hauptbereiche (untere Navigation) plus Live-Training und Ergebnis. */
-export type Screen = "home" | "training" | "progress" | "profile" | "studio" | "live" | "result" | "tv";
+/** Hauptbereiche (untere Navigation), Programm-Seiten, Live-Training und Ergebnis. */
+export type Screen =
+  | "home"
+  | "training"
+  | "progress"
+  | "profile"
+  | "studio"
+  | "programs"
+  | "planner"
+  | "program"
+  | "builder"
+  | "workout"
+  | "live"
+  | "result"
+  | "tv";
+
+/** Ein Schritt im laufenden Training (Programm-Einheit oder eigenes Training). */
+export interface WorkoutStep extends Step {
+  setsDone: number;
+  skipped: boolean;
+}
+
+export interface WorkoutRun {
+  origin: "program" | "custom";
+  title: string;
+  steps: WorkoutStep[];
+  /** Aktueller Schritt; gleich steps.length, wenn alles erledigt ist. */
+  index: number;
+  /** Einheit des Programms (nur origin "program"). */
+  programIndex?: number;
+  /** Fortschritt wurde schon gezählt (verhindert doppeltes Zählen). */
+  counted: boolean;
+}
 export type Source = "camera" | "demo";
 
 export { VIEW_MODES, isViewMode, type ViewMode } from "./view-modes";
@@ -84,6 +131,12 @@ export interface AppState {
   settings: Settings;
   /** Ziel der nächsten Session (Startseite/Training). */
   targetReps: number;
+  /** Aktives Programm (Antworten + Fortschritt) oder null. */
+  program: StoredProgram | null;
+  /** Zuletzt gebautes eigenes Training. */
+  custom: CustomWorkout | null;
+  /** Laufendes Training mit mehreren Schritten. */
+  workout: WorkoutRun | null;
 }
 
 const initialHud: Hud = {
@@ -122,7 +175,36 @@ export const useApp = create<AppState>(() => ({
   settingsSaveFailed: false,
   settings: initialSettings,
   targetReps: initialSettings.defaultTarget,
+  program: loadProgram(),
+  custom: loadCustom(),
+  workout: null,
 }));
+
+const toRun = (origin: WorkoutRun["origin"], title: string, steps: Step[], programIndex?: number): WorkoutRun => ({
+  origin,
+  title,
+  steps: steps.map((s) => ({ ...s, setsDone: 0, skipped: false })),
+  index: 0,
+  programIndex,
+  counted: false,
+});
+
+/** Nach einem erledigten/übersprungenen Satz: weiter zum nächsten offenen Schritt, am Ende Programmfortschritt zählen. */
+function advance(run: WorkoutRun, program: StoredProgram | null): { workout: WorkoutRun; program: StoredProgram | null } {
+  let index = run.index;
+  while (index < run.steps.length && (run.steps[index]!.skipped || run.steps[index]!.setsDone >= run.steps[index]!.sets)) index++;
+  const next = { ...run, index };
+  if (index < run.steps.length || run.counted) return { workout: next, program };
+  next.counted = true;
+  // Nur zählen, wenn mindestens ein Satz wirklich gemacht wurde (alles übersprungen = keine Einheit)
+  const didSomething = run.steps.some((s) => s.setsDone > 0);
+  if (run.origin === "program" && program && didSomething && run.programIndex === program.done) {
+    const p = { ...program, done: program.done + 1 };
+    saveProgram(p);
+    return { workout: next, program: p };
+  }
+  return { workout: next, program };
+}
 
 let feedbackId = 0;
 export function showFeedback(text: string, tone: Feedback["tone"]): void {
@@ -223,6 +305,80 @@ export const actions = {
       };
     });
     return ok;
+  },
+  /** Neues Programm aus den Planer-Antworten anlegen (ersetzt ein laufendes). */
+  createProgram(answers: Answers, name?: string) {
+    const program: StoredProgram = { answers, done: 0, adjust: 0, startedAt: new Date().toISOString(), ...(name ? { name } : {}) };
+    saveProgram(program);
+    useApp.setState({ program });
+    actions.updateSettings({ weeklyGoal: answers.days });
+  },
+  removeProgram() {
+    saveProgram(null);
+    useApp.setState({ program: null });
+  },
+  /** „Zu schwer / zu leicht“: Belastung ab der nächsten Einheit anpassen. */
+  adjustProgram(adjust: -1 | 0 | 1) {
+    useApp.setState((s) => {
+      if (!s.program) return {};
+      const program = { ...s.program, adjust };
+      saveProgram(program);
+      return { program };
+    });
+  },
+  /** Nächste offene Einheit des Programms starten (Übersicht der Schritte). */
+  startProgramSession() {
+    const p = useApp.getState().program;
+    if (!p) return;
+    const plan = createPlan(p.answers);
+    const index = Math.min(p.done, totalSessions(plan) - 1);
+    const session = sessionAt(plan, index, p.adjust);
+    useApp.setState({ workout: toRun("program", session.title, session.steps, index), screen: "workout", error: null, engineStatus: "idle" });
+  },
+  saveCustom(custom: CustomWorkout) {
+    saveCustom(custom);
+    useApp.setState({ custom });
+  },
+  startCustom(custom: CustomWorkout) {
+    actions.saveCustom(custom);
+    useApp.setState({ workout: toRun("custom", custom.name, custom.steps), screen: "workout", error: null, engineStatus: "idle" });
+  },
+  /** Aktuellen Satz als erledigt markieren. */
+  workoutSetDone() {
+    useApp.setState((s) => {
+      const run = s.workout;
+      if (!run || run.index >= run.steps.length) return {};
+      const steps = run.steps.map((st, i) => (i === run.index ? { ...st, setsDone: Math.min(st.sets, st.setsDone + 1) } : st));
+      return advance({ ...run, steps }, s.program);
+    });
+  },
+  /** Aktuelle Übung überspringen. */
+  workoutSkip() {
+    useApp.setState((s) => {
+      const run = s.workout;
+      if (!run || run.index >= run.steps.length) return {};
+      const steps = run.steps.map((st, i) => (i === run.index ? { ...st, skipped: true } : st));
+      return advance({ ...run, steps }, s.program);
+    });
+  },
+  /** Kamera-Übung des aktuellen Schritts live starten (Kniebeugen). */
+  workoutLive(source: Source) {
+    const run = useApp.getState().workout;
+    const step = run?.steps[run.index];
+    if (!step || !exerciseById(step.exerciseId)?.tracked) return;
+    actions.openLive(source, step.reps ?? 10);
+  },
+  /** Vom Ergebnis zurück ins laufende Training; der Satz zählt, wenn mindestens eine Wiederholung erkannt wurde. */
+  returnToWorkout(countSet: boolean) {
+    if (countSet) actions.workoutSetDone();
+    useApp.setState({ screen: "workout", error: null, engineStatus: "idle" });
+  },
+  /** Zurück zum laufenden Training (z. B. nach Abbruch der Kamera). */
+  openWorkout() {
+    if (useApp.getState().workout) useApp.setState({ screen: "workout", error: null, engineStatus: "idle" });
+  },
+  endWorkout() {
+    useApp.setState({ workout: null, screen: "home", error: null, engineStatus: "idle" });
   },
   /** Verlauf löschen; false, wenn der Speicher das Löschen verweigert (Verlauf bleibt dann sichtbar). */
   clearHistory(): boolean {
