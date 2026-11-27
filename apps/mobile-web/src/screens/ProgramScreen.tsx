@@ -4,7 +4,7 @@ import { actions, useApp } from "../store";
 import { explain, phaseOf } from "../program/planner";
 import { programView } from "../program/view";
 import { useStage } from "./HomeScreen";
-import { LevelMeter } from "../components/LevelMeter";
+import { LevelDial } from "../components/LevelDial";
 
 /** Kurzer Name je Stufe 1–10. */
 const LEVEL_NAME = ["sehr leicht", "sehr leicht", "leicht", "leicht", "mittel", "mittel", "schwer", "schwer", "sehr schwer", "sehr schwer"];
@@ -119,7 +119,7 @@ export function ProgramScreen() {
         <h2 id="passt" className="nx-section-title">
           Stufe
         </h2>
-        <LevelMeter value={program.level} names={LEVEL_NAME} onChange={(l) => actions.setProgramLevel(l)} />
+        <LevelDial value={program.level} names={LEVEL_NAME} onChange={(l) => actions.setProgramLevel(l)} />
         <p className="nx-note" role="status">
           {levelNote(program.level)}
         </p>

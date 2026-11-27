@@ -1857,100 +1857,9 @@
   }
 }
 
-/* Stufe 1–10 im Programm: ansteigende Balkenleiste (Intensitätsanzeige), Farbe von Türkis nach Rot */
-.nx-meter {
-  padding: 16px 16px 12px;
-  border-radius: 22px;
-  background: linear-gradient(160deg, rgba(34, 52, 58, 0.95), rgba(20, 33, 38, 0.95));
-  border: 1px solid rgba(244, 242, 236, 0.1);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
-}
-.nx-meter-head {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 14px;
-}
-.nx-meter-num {
-  min-width: 58px;
-  height: 58px;
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 30px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: #10181b;
-  background: hsl(var(--lv-hue) 68% 58%);
-  box-shadow: 0 0 22px hsl(var(--lv-hue) 70% 50% / 0.38);
-  transition: background 0.25s, box-shadow 0.25s;
-}
-.nx-meter-name {
-  display: flex;
-  flex-direction: column;
-  font-size: 20px;
-  font-weight: 800;
-}
-.nx-meter-name small {
+.nx-dial-label.cur {
   font-size: 13px;
-  font-weight: 600;
-  color: rgba(244, 242, 236, 0.6);
-}
-.nx-meter-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  height: 84px;
-  touch-action: none; /* Ziehen ändert die Stufe, statt die Seite zu scrollen */
-  user-select: none;
-  -webkit-user-select: none;
-}
-.nx-meter-bar {
-  flex: 1;
-  height: var(--h);
-  min-height: 24px;
-  border: 0;
-  border-radius: 9px;
-  padding: 0 0 5px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  background: rgba(244, 242, 236, 0.08);
-  color: rgba(244, 242, 236, 0.45);
-  font-size: 12px;
   font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
-  -webkit-tap-highlight-color: transparent;
-}
-.nx-meter-bar.on {
-  background: linear-gradient(180deg, hsl(var(--bar-hue) 66% 60%), hsl(var(--bar-hue) 58% 44%));
-  color: rgba(16, 24, 27, 0.75);
-}
-.nx-meter-bar.cur {
-  transform: scaleY(1.06);
-  transform-origin: bottom;
-  box-shadow: 0 0 0 2px rgba(244, 242, 236, 0.9), 0 6px 18px hsl(var(--bar-hue) 70% 50% / 0.45);
-  color: #10181b;
-}
-.nx-meter-bar:focus-visible {
-  outline: 2px solid #f4f2ec;
-  outline-offset: 2px;
-}
-.nx-meter .nx-levels-scale {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-  font-size: 12px;
-  color: rgba(244, 242, 236, 0.55);
-}
-@media (prefers-reduced-motion: reduce) {
-  .nx-meter-bar,
-  .nx-meter-num {
-    transition: none;
-  }
 }
 
 /* Automatischer Ablauf im Training: Countdown-Ring, Takt-Zähler, Schalter */
@@ -2109,4 +2018,86 @@
 .result-auto .btn {
   white-space: nowrap;
   flex: none;
+}
+
+/* Pausenlänge als Drehregler und Stimmtest im Training */
+.nx-dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 16px;
+}
+.nx-dial svg {
+  width: 210px;
+  height: 210px;
+  touch-action: none; /* Drehen statt Scrollen */
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.35));
+  border-radius: 50%;
+}
+.nx-dial svg:focus-visible {
+  outline: 2px solid #f4f2ec;
+  outline-offset: 4px;
+}
+.nx-dial-value {
+  fill: #f4f2ec;
+  font-size: 40px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.nx-dial-unit {
+  fill: rgba(244, 242, 236, 0.6);
+  font-size: 12px;
+  font-weight: 600;
+}
+.nx-dial-label {
+  fill: rgba(244, 242, 236, 0.45);
+  font-size: 11px;
+  font-weight: 700;
+}
+.nx-dial-knob {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+.nx-dial-caption {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+.nx-dial-fine {
+  display: grid;
+  grid-template-columns: 64px 1fr 64px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 8px;
+}
+.nx-dial-fine button {
+  height: 40px;
+  border-radius: 20px;
+  border: 1px solid rgba(71, 212, 208, 0.45);
+  background: rgba(71, 212, 208, 0.1);
+  color: #f4f2ec;
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.nx-dial-fine button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.nx-voice-test {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 10px;
+  text-align: center;
+}
+.nx-voice-test span {
+  font-size: 12px;
+  color: var(--muted);
 }

@@ -30,7 +30,7 @@ import {
   type Settings,
   type StoredProgram,
 } from "./persist";
-import { REST_SECONDS, createPlan, sessionAt, totalSessions, type Answers, type Step } from "./program/planner";
+import { createPlan, sessionAt, totalSessions, type Answers, type Step } from "./program/planner";
 import { unlockVoice } from "./voice";
 import { exerciseById } from "./program/catalog";
 
@@ -393,7 +393,7 @@ export const actions = {
       const next = advance({ ...run, steps }, s.program);
       // automatischer Ablauf: danach Pause, dann geht es von selbst weiter
       const more = next.workout.index < next.workout.steps.length;
-      return { ...next, restUntil: s.settings.autoFlow && more ? Date.now() + REST_SECONDS * 1000 : null };
+      return { ...next, restUntil: s.settings.autoFlow && more ? Date.now() + s.settings.restSeconds * 1000 : null };
     });
   },
   /** Aktuelle Übung überspringen. */

@@ -152,3 +152,16 @@ describe("Automatischer Ablauf", () => {
     actions.updateSettings({ autoFlow: true });
   });
 });
+
+describe("Pausenlänge", () => {
+  it("nimmt die eingestellte Pause", () => {
+    actions.updateSettings({ autoFlow: true, restSeconds: 60 });
+    actions.startSingle("glute-bridge");
+    const t0 = Date.now();
+    actions.workoutSetDone();
+    const rest = useApp.getState().restUntil!;
+    expect(rest).toBeGreaterThanOrEqual(t0 + 59_000);
+    expect(rest).toBeLessThanOrEqual(Date.now() + 60_000);
+    actions.updateSettings({ restSeconds: 30 });
+  });
+});

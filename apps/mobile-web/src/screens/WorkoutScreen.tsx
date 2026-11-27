@@ -5,7 +5,8 @@ import { exerciseById } from "../program/catalog";
 import { programView } from "../program/view";
 import { avatarById } from "../render/avatars";
 import { SHOW_DEMO } from "../demo-mode";
-import { PACE_SECONDS, REST_SECONDS } from "../program/planner";
+import { PACE_SECONDS } from "../program/planner";
+import { RestDial } from "../components/RestDial";
 import { say, stopVoice } from "../voice";
 
 /**
@@ -95,6 +96,7 @@ function Current({ trainerId }: { trainerId: string }) {
   const run = useApp((s) => s.workout)!;
   const auto = useApp((s) => s.settings.autoFlow);
   const voiceOn = useApp((s) => s.settings.voice);
+  const restSeconds = useApp((s) => s.settings.restSeconds);
   const step = run.steps[run.index]!;
   const e = exerciseById(step.exerciseId)!;
   const setNo = step.setsDone + 1;
@@ -221,7 +223,7 @@ function Current({ trainerId }: { trainerId: string }) {
 
       {phase === "wait" && (
         <div className={`nx-auto${resting ? " rest" : ""}`} role="timer" aria-label={`${resting ? "Pause" : "Start"} in ${remain} Sekunden`}>
-          <div className="nx-auto-ring" style={{ "--p": `${Math.min(1, remain / (resting ? REST_SECONDS : READY_SECONDS))}` } as CSSProperties}>
+          <div className="nx-auto-ring" style={{ "--p": `${Math.min(1, remain / (resting ? Math.max(restSeconds, remain) : READY_SECONDS))}` } as CSSProperties}>
             <b>{remain}</b>
             <small>s</small>
           </div>
@@ -317,6 +319,25 @@ function Current({ trainerId }: { trainerId: string }) {
           <span>Sprachansage</span>
         </label>
       </div>
+      <RestDial
+        value={restSeconds}
+        onChange={(r) => {
+          actions.updateSettings({ restSeconds: r });
+          // läuft gerade eine Pause: mit der neuen Länge neu beginnen (ohne erneute Ansage beim Drehen)
+          if (phase === "wait" && resting) {
+            setDeadline(Date.now() + r * 1000);
+            useApp.setState({ restUntil: Date.now() + r * 1000 });
+          }
+        }}
+      />
+      {voiceOn && (
+        <div className="nx-voice-test">
+          <button className="link-btn" onClick={() => say("Hallo! So klingt die Sprachansage im Training.")}>
+            Stimme testen
+          </button>
+          <span>Nichts zu hören? Lautlos-Schalter am iPhone ausschalten und lauter stellen.</span>
+        </div>
+      )}
       {auto && phase === "manual" && (
         <button className="btn btn-ghost nx-wide" onClick={arm}>
           Automatisch weiter ab hier

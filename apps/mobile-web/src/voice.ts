@@ -19,29 +19,50 @@ function germanVoice(s: SpeechSynthesis): SpeechSynthesisVoice | null {
   return cached;
 }
 
-/** Text ansagen; eine noch laufende Ansage wird abgebrochen (die neue ist immer die aktuellere). */
+let pending: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Text ansagen; eine noch laufende Ansage wird abgebrochen (die neue ist immer die aktuellere).
+ * Safari verschluckt eine Ansage, die direkt nach cancel() kommt – deshalb nach dem Abbrechen kurz warten.
+ */
 export function say(text: string): void {
   const s = synth();
   if (!s || !text) return;
+  if (pending) clearTimeout(pending);
+  pending = null;
+  const go = () => {
+    pending = null;
+    try {
+      s.resume(); // iOS hängt nach dem Wechsel in den Hintergrund manchmal in „pausiert“
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "de-DE";
+      const voice = germanVoice(s);
+      if (voice) u.voice = voice;
+      u.rate = 1.05;
+      u.volume = 1;
+      s.speak(u);
+    } catch {
+      // Sprachausgabe nicht verfügbar – Training läuft ohne Ansage weiter
+    }
+  };
   try {
-    s.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "de-DE";
-    const v = germanVoice(s);
-    if (v) u.voice = v;
-    u.rate = 1.05;
-    s.speak(u);
+    if (s.speaking || s.pending) {
+      s.cancel();
+      pending = setTimeout(go, 120);
+    } else go();
   } catch {
-    // Sprachausgabe nicht verfügbar – Training läuft ohne Ansage weiter
+    // ignorieren
   }
 }
 
-/** Beim Antippen aufrufen: schaltet die Sprachausgabe auf iOS frei (stumme, leere Ansage). */
+/** Beim Antippen aufrufen: schaltet die Sprachausgabe auf iOS frei (stumme Ansage). */
 export function unlockVoice(): void {
   const s = synth();
   if (!s) return;
   try {
-    const u = new SpeechSynthesisUtterance(" ");
+    // iOS schaltet nur mit einer echten (nicht leeren) Ansage während des Antippens frei
+    const u = new SpeechSynthesisUtterance(".");
+    u.lang = "de-DE";
     u.volume = 0;
     s.speak(u);
   } catch {
@@ -50,6 +71,8 @@ export function unlockVoice(): void {
 }
 
 export function stopVoice(): void {
+  if (pending) clearTimeout(pending);
+  pending = null;
   try {
     synth()?.cancel();
   } catch {
