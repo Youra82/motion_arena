@@ -87,3 +87,31 @@ test("Baukasten rechnet Dauer mit und startet das eigene Training", async ({ pag
   await expect(page.getByText("Übung 1 von 4")).toBeVisible();
   await expect(page.getByRole("button", { name: /Mit Kamera zählen/ })).toBeVisible();
 });
+
+test("Programme: „Fertig wählen“ zeigt die Programme, aktives Programm per Wischen löschen", async ({ page }) => {
+  await programme(page);
+  await page.getByRole("button", { name: /Fertig wählen/ }).click();
+  await expect(page.getByRole("heading", { name: "Fertige Programme" })).toBeInViewport();
+  await page.getByRole("button", { name: /^Kraft-Start/ }).click();
+  await programme(page);
+  const row = page.locator(".swipe-content").first();
+  await row.evaluate((e) => e.scrollIntoView({ block: "center" }));
+  const box = (await row.boundingBox())!;
+  const y = box.y + box.height / 2;
+  // kurzer Wisch: „Löschen“ erscheint, Antippen löscht
+  await page.mouse.move(box.x + box.width - 20, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width - 80, y, { steps: 6 });
+  await page.mouse.move(box.x + box.width - 140, y, { steps: 6 });
+  await page.mouse.up();
+  const del = page.getByRole("button", { name: "Programm Kraft-Start löschen" });
+  await expect(del).toBeInViewport();
+  await page.waitForTimeout(400);
+  const r = (await row.boundingBox())!;
+  expect(r.x).toBeLessThan(box.x - 60); // Zeile ist wirklich zur Seite geschoben
+  await del.click();
+  await expect(page.getByText(/^Aktiv$/)).toHaveCount(0);
+  await page.reload();
+  await programme(page);
+  await expect(page.getByRole("button", { name: "Programm Kraft-Start löschen" })).toHaveCount(0);
+});

@@ -247,6 +247,66 @@
   color: #ff8a6a;
 }
 
+/* Wischen zum Löschen (iOS-Art) */
+.swipe-row {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-md);
+}
+.swipe-delete {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 22px;
+  background: #ff3b30;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+.swipe-content {
+  z-index: 1;
+  position: relative;
+  touch-action: pan-y;
+  transition: transform 0.22s ease;
+  background: var(--bg);
+}
+.swipe-content.dragging {
+  transition: none;
+}
+.swipe-content > * {
+  width: 100%;
+}
+.nx-presets-section {
+  scroll-margin-top: var(--s4);
+}
+.swipe-row .nx-active {
+  width: 100%;
+  background: #2a2522;
+}
+.swipe-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.nx-presets.flash .nx-preset {
+  animation: nx-flash 1.2s ease-out;
+}
+@keyframes nx-flash {
+  0%,
+  40% {
+    box-shadow: 0 0 0 3px var(--motion);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(71, 212, 208, 0);
+  }
+}
+
 /* Laufendes Training / Programmkarte */
 .nx-resume,
 .nx-active {

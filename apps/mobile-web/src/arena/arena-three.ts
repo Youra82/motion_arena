@@ -29,6 +29,8 @@ import { avatarById } from "../render/avatars";
 import { ROOM_GROUND, ROOM_PLATFORM, backdropZoom, roomBackdrop } from "../render/concept-art";
 
 const asset = (name: string) => `${import.meta.env.BASE_URL}arena/${name}`;
+/** Trainer steht so weit (Meter) hinter dem Spieler – fast gleiche Tiefe, damit beide gleich groß wirken. */
+const TRAINER_BEHIND = 0.25;
 const JOINT_COLOR = new THREE.Color(0.34, 2.6, 2.34);
 
 /**
@@ -626,13 +628,13 @@ export class ArenaThree {
 
     const baseDepth = compact ? -0.48 : soloAvatar ? 1.36 : solo ? 0.45 : 0.05;
     const playerPoint = this.place(playerX, playerY, baseDepth).clone();
-    const trainerPoint = this.place(trainerX, trainerY, baseDepth - 0.45).clone();
+    // Trainer steht neben dem Spieler auf (fast) derselben Tiefe – so haben beide im Raum dieselbe Körpergröße.
+    // (Früher stand er auf der weiter hinten liegenden Bodenlinie des Raumbilds und wirkte dadurch deutlich kleiner.)
+    const trainerZ = baseDepth - TRAINER_BEHIND;
+    const trainerPoint = this.place(trainerX, Math.min(trainerY, playerY), trainerZ).clone();
     this.camera.position.y -= playerPoint.y;
     this.camera.updateMatrixWorld();
-    // Trainer genau dort auf den Boden stellen, wo sein Sichtstrahl den Boden trifft (Füße = Bodenlinie im Raumbild)
-    const trainerFloor = this.onFloor(trainerX, trainerY);
-    const trainerZ = trainerFloor && trainerFloor.z < baseDepth - 0.15 && trainerFloor.z > baseDepth - 3 ? trainerFloor.z : baseDepth - 0.45;
-    const trainerXWorld = trainerFloor && trainerZ === trainerFloor.z ? trainerFloor.x : trainerPoint.x;
+    const trainerXWorld = trainerPoint.x;
     this.player.root.position.set(playerPoint.x, 0, baseDepth);
     this.player.root.rotation.y = guidedAvatar ? 0.56 : solo ? 0 : 0.42;
     this.trainer.root.position.set(trainerXWorld, 0, trainerZ);

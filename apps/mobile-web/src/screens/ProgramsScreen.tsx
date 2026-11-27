@@ -1,4 +1,6 @@
+import { useRef, useState } from "react";
 import { ICONS, Icon, MainLayout, trainerPhoto } from "../components/common";
+import { SwipeToDelete } from "../components/SwipeToDelete";
 import { actions, useApp } from "../store";
 import { createPlan, sessionAt, type Answers } from "../program/planner";
 import { programView } from "../program/view";
@@ -21,6 +23,15 @@ export function ProgramsScreen() {
   const program = useApp((s) => s.program);
   const { trainer, backdrop } = useStage();
   const view = program ? programView(program) : null;
+  const presetsRef = useRef<HTMLElement>(null);
+  const [flash, setFlash] = useState(false);
+  const showPresets = () => {
+    presetsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setFlash(false);
+    requestAnimationFrame(() => setFlash(true));
+    setTimeout(() => setFlash(false), 1300);
+    presetsRef.current?.querySelector<HTMLElement>(".nx-preset")?.focus({ preventScroll: true });
+  };
   return (
     <MainLayout className="nx-programs">
       <header>
@@ -45,18 +56,18 @@ export function ProgramsScreen() {
           <b>Selbst bauen</b>
           <span>Übungen antippen, Zeit wird mitgerechnet</span>
         </button>
-        <a className="nx-action" href="#fertige-programme">
+        <button className="nx-action" onClick={showPresets}>
           <Icon d={ICONS.list} />
           <b>Fertig wählen</b>
           <span>Bewährte Programme für typische Ziele</span>
-        </a>
+        </button>
       </div>
 
-      <section aria-labelledby="fertige-programme">
+      <section aria-labelledby="fertige-programme" ref={presetsRef} className="nx-presets-section">
         <h2 id="fertige-programme" className="nx-section-title">
           Fertige Programme
         </h2>
-        <div className="nx-presets">
+        <div className={`nx-presets${flash ? " flash" : ""}`}>
           {PRESETS.map((p) => {
             const plan = createPlan(p.answers);
             const first = sessionAt(plan, 0);
@@ -85,6 +96,8 @@ export function ProgramsScreen() {
       </section>
 
       {view && (
+        <div>
+        <SwipeToDelete label={`Programm ${view.name} löschen`} onDelete={() => actions.removeProgram()}>
         <button className="nx-active" onClick={() => actions.navigate("program")}>
           <span className="nx-active-ring" style={{ ["--p" as string]: `${Math.round((view.done / view.total) * 100)}` }} aria-hidden="true" />
           <span>
@@ -95,6 +108,9 @@ export function ProgramsScreen() {
           </span>
           <span className="nx-resume-go">Öffnen</span>
         </button>
+        </SwipeToDelete>
+        <p className="swipe-hint">Zum Löschen nach links wischen</p>
+        </div>
       )}
     </MainLayout>
   );
