@@ -29,8 +29,13 @@ import { avatarById } from "../render/avatars";
 import { ROOM_GROUND, ROOM_PLATFORM, backdropZoom, roomBackdrop } from "../render/concept-art";
 
 const asset = (name: string) => `${import.meta.env.BASE_URL}arena/${name}`;
-/** Trainer steht so weit (Meter) hinter dem Spieler – fast gleiche Tiefe, damit beide gleich groß wirken. */
-const TRAINER_BEHIND = 0.25;
+/** Trainer steht auf derselben Linie wie der Spieler, nur seitlich versetzt – gleiche Fußhöhe, gleiche Größe. */
+const TRAINER_BEHIND = 0;
+/** Szene heranzoomen: hochkant stärker (schmaler Bildschirm), quer etwas. */
+const VIEW_ZOOM_PORTRAIT = 1.3;
+const VIEW_ZOOM_WIDE = 1.12;
+/** Zeitfenster für die Standhöhe im Kamerabild (Kniebeugen-Tiefpunkt dauert kürzer). */
+const STAND_WINDOW_MS = 3000;
 const JOINT_COLOR = new THREE.Color(0.34, 2.6, 2.34);
 
 /**
@@ -334,7 +339,10 @@ export class ArenaThree {
   private ghosts: TrainerRig[] = [];
   private trail: Array<{ at: number; flex: number; joints: Landmark[] | null; metric: boolean }> = [];
   private nextTrailAt = 0;
-  private cameraHeight = 0;
+  /** Standhöhe (Kopf–Fuß) im Kamerabild: Höchstwert der letzten Sekunden – Abstand zur Kamera ändert die Figur nicht. */
+  private standSamples: Array<{ at: number; v: number }> = [];
+  /** Heranzoomen der ganzen Szene (Raumbild + Figuren gemeinsam), damit man aus 2 m Abstand genug sieht. */
+  private viewZoom = 1;
   private cameraTrail: Array<{ at: number; pose: Landmark[]; fit: Fit }> = [];
   private nextCameraSample = 0;
 
@@ -536,7 +544,15 @@ export class ArenaThree {
     // sichtbarer Bildbereich (von oben): [1 - offset.y - r, 1 - offset.y]
     const top = 1 - plate.offset.y - r;
     const toScreen = (v: number) => (v - top) / r;
-    return { player: toScreen(g.player) - toScreen(core.player), trainer: toScreen(g.trainer) - toScreen(core.trainer) };
+    // Bezug: Core Studio ohne Zoom (dafür sind die Grundwerte abgestimmt); Zoom verschiebt den Boden mit
+    return { player: toScreen(g.player) - core.player, trainer: toScreen(g.trainer) - core.trainer };
+  }
+
+  /** Bildschirmhöhe (Pixel) einer stehenden Person dieser Größe an diesem Bodenpunkt. */
+  private projectedHeight(at: THREE.Vector3, bodyHeight: number, screenH: number): number {
+    const foot = new THREE.Vector3(at.x, 0, at.z).project(this.camera);
+    const head = new THREE.Vector3(at.x, bodyHeight, at.z).project(this.camera);
+    return Math.abs(head.y - foot.y) / 2 * screenH;
   }
 
   private place(x: number, y: number, atZ: number): THREE.Vector3 {
@@ -570,7 +586,7 @@ export class ArenaThree {
       const plate = this.plates.get(number);
       if (plate && plate.image instanceof HTMLImageElement) {
         const imageAspect = plate.image.width / plate.image.height;
-        const zoom = backdropZoom(number);
+        const zoom = backdropZoom(number) * this.viewZoom;
         plate.repeat.set(Math.min(1, this.camera.aspect / imageAspect) / zoom, Math.min(1, imageAspect / this.camera.aspect) / zoom);
         // Bei Vergrößerung unten verankern (Boden rückt nach oben), sonst mittig zuschneiden
         plate.offset.set((1 - plate.repeat.x) / 2, zoom > 1 ? 0 : (1 - plate.repeat.y) / 2);
@@ -620,7 +636,9 @@ export class ArenaThree {
     const bufferH = Math.max(1, Math.round(h * pxScale));
     if (this.renderer.domElement.width !== bufferW || this.renderer.domElement.height !== bufferH) this.renderer.setSize(bufferW, bufferH, false);
     this.camera.aspect = w / h;
-    this.camera.fov = compact ? 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(21)) / this.camera.aspect)) : 42;
+    this.viewZoom = compact ? VIEW_ZOOM_PORTRAIT : VIEW_ZOOM_WIDE;
+    const halfTan = Math.tan(THREE.MathUtils.degToRad(21)) / this.viewZoom;
+    this.camera.fov = 2 * THREE.MathUtils.radToDeg(Math.atan(compact ? halfTan / this.camera.aspect : halfTan));
     this.camera.position.set(0.10, 1.63, 4.6);
     this.camera.lookAt(0.0, 1.15, -1.4);
     this.camera.updateProjectionMatrix();
@@ -714,7 +732,8 @@ export class ArenaThree {
     this.renderer.render(this.scene, this.camera);
     compositeArena(ctx, this.renderer.domElement, frame.capture ?? false);
     if (frame.mode === "skelett" && this.player.root.visible) this.drawRigSkeleton(ctx, this.player, w, h);
-    if (filmed) this.drawCameraPlayer(ctx, frame, playerX * w, playerY * h, Math.min(h * (compact ? 0.34 : 0.57), w * 0.66), calm);
+    // Hologramm genau so groß wie eine Person mit Trainergröße an der Spielerposition im Raum
+    if (filmed) this.drawCameraPlayer(ctx, frame, playerX * w, playerY * h, this.projectedHeight(this.player.root.position, this.trainerHeight, h), calm);
     else this.cameraTrail = [];
     ctx.canvas.dataset.arena = frame.room;
     ctx.canvas.dataset.arenaLight = frame.room === "loft" && frame.studioRoom?.id === "core-studio" && this.environment.coreLightReady ? "core-hdr" : "studio";
@@ -770,8 +789,10 @@ export class ArenaThree {
     if (!feet.length) return;
     const footX = feet.reduce((sum, p) => sum + (v.mirror ? 1 - p.x : p.x), 0) / feet.length;
     const footY = Math.max(...feet.map((p) => p.y));
-    this.cameraHeight = Math.max(clamp(footY - pose[LM.NOSE]!.y + 0.065, 0.16, 1.1), this.cameraHeight * 0.998);
-    const dh = height / this.cameraHeight;
+    const seen = clamp(footY - pose[LM.NOSE]!.y + 0.065, 0.16, 1.1);
+    this.standSamples = [...this.standSamples.filter((s) => frame.now - s.at < STAND_WINDOW_MS), { at: frame.now, v: seen }];
+    const stand = Math.max(...this.standSamples.map((s) => s.v));
+    const dh = height / stand;
     const dw = dh * aspect;
     const fit = { ox: x - footX * dw, oy: y - footY * dh, dw, dh };
     if (calm || !frame.running) this.cameraTrail = [];
