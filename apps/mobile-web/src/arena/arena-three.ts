@@ -16,6 +16,13 @@ import { addTrainerContours, poseTrainerContours } from "./trainer-anatomy";
 import { JOINTS, TrainerRig } from "./trainer-rig";
 import { trainerFootwear } from "./trainer-footwear";
 import { JumpTracker } from "./jump";
+import { TrainerPhoto } from "./trainer-photo";
+
+/** Trainer mit vorab gerenderter Kniebeuge in Fotoqualität (tools/figuren/render_squat.py + pack_frames.py). */
+const TRAINER_PHOTOS: Record<string, string> = Object.fromEntries(
+  ["lukas", "elena", "ken", "mia", "david", "aiko", "viktor", "nova", "matteo", "raven", "finn", "sara", "leo", "zara", "echo"]
+    .map((id) => [id, `renders/${id}/`]),
+);
 import { attachTrainerHair, trainerHair } from "./trainer-hair";
 import { makeTrainerMaterial, type TrainerLook } from "./trainer-material";
 import { avatarById } from "../render/avatars";
@@ -41,6 +48,8 @@ const ATHLETE = new Set(["zara"]);
 type BodyKind = "lukas" | "woman" | "athlete" | "rocketbox";
 /** Microsoft-Rocketbox-Figuren (MIT-Lizenz), umgewandelt mit src/dev/rocketbox.ts. */
 const ROCKETBOX: Record<string, string> = {
+  // eigene Figuren aus der Figuren-Werkstatt (tools/figuren: Blender + MPFB, CC0/CC-BY-Assets)
+  lukas: "bodies/mpfb/lukas.glb",
   finn: "bodies/rocketbox/sports-male-04.glb",
   sara: "bodies/rocketbox/sports-female-02.glb",
 };
@@ -174,7 +183,8 @@ function makeRocketboxMaterial(source: THREE.MeshStandardMaterial): THREE.MeshPh
   const m = new THREE.MeshPhysicalMaterial({
     name: source.name, map: source.map, normalMap: source.normalMap, roughnessMap: source.roughnessMap,
     roughness: source.roughnessMap ? 1 : 0.75, metalness: 0, specularIntensity: 0.55,
-    alphaTest: source.alphaTest, side: source.alphaTest > 0 ? THREE.DoubleSide : THREE.FrontSide,
+    alphaTest: source.alphaTest > 0 ? source.alphaTest : source.transparent ? 0.45 : 0,
+    side: source.alphaTest > 0 || source.transparent || source.side === THREE.DoubleSide ? THREE.DoubleSide : THREE.FrontSide,
   });
   m.normalScale.setScalar(0.9);
   m.envMapIntensity = 1.0;
@@ -306,6 +316,9 @@ export class ArenaThree {
   private player: TrainerRig | null = null;
   private playerMesh: THREE.SkinnedMesh | null = null;
   private trainerMesh: THREE.SkinnedMesh | null = null;
+  /** Foto-Trainer (falls für diese Figur gerendert) und Körperhöhe der 3D-Figur für den Maßstab. */
+  private trainerPhoto: TrainerPhoto | null = null;
+  private trainerHeight = 1.75;
   private playerHologram: THREE.Material | null = null;
   /** Teile der Spielerfigur mit ihrem Avatar- und Hologramm-Material (je Ansicht umgeschaltet). */
   private playerParts: Array<{ mesh: THREE.SkinnedMesh; kit: THREE.Material | THREE.Material[]; hologram: THREE.Material }> = [];
@@ -411,6 +424,12 @@ export class ArenaThree {
         if (body.barefoot) trainerFootwear(rig.root, body.kind !== "lukas");
         this.trainer = rig;
         this.trainerMesh = m;
+        rig.root.updateMatrixWorld(true);
+        this.trainerHeight = new THREE.Box3().setFromObject(rig.root).getSize(new THREE.Vector3()).y;
+        if (TRAINER_PHOTOS[id]) {
+          this.trainerPhoto = new TrainerPhoto(asset(TRAINER_PHOTOS[id]!));
+          this.scene.add(this.trainerPhoto.mesh);
+        }
         this.scene.add(rig.root);
       } else {
         this.dropRole("player");
@@ -460,6 +479,11 @@ export class ArenaThree {
     if (role === "trainer") {
       this.trainer = null;
       this.trainerMesh = null;
+      if (this.trainerPhoto) {
+        this.scene.remove(this.trainerPhoto.mesh);
+        this.trainerPhoto.dispose();
+        this.trainerPhoto = null;
+      }
     } else {
       this.player = null;
       this.ghosts = [];
@@ -633,6 +657,11 @@ export class ArenaThree {
       this.trainer.pose(guideFlex);
       poseTrainerContours(this.trainerMesh, guideFlex, true);
     }
+    // Foto-Trainer: gerendertes Bild zur Tiefe zeigen, das 3D-Netz dann ausblenden (Pose läuft für Schatten weiter)
+    const photo = this.trainerPhoto?.ready && !solo ? this.trainerPhoto : null;
+    this.trainer.root.traverse((node) => { if ((node as THREE.Mesh).isMesh) node.visible = !photo; });
+    if (photo) photo.update(guideFlex, this.trainer.root.position, this.trainerHeight, this.camera, frame.studioRoom?.light ? new THREE.Color(frame.studioRoom.light) : undefined);
+    else this.trainerPhoto?.hide();
     const analytic = frame.mode === "muskel" || frame.mode === "zonen" || frame.mode === "gitter";
     // Du erscheinst als dein gewählter Avatar – in der Arena (neben dem Trainer) und in der Ansicht „Avatar“
     const kitShown = frame.mode === "avatar" || !frame.mode || frame.mode === "arena";
@@ -786,6 +815,7 @@ export class ArenaThree {
     this.analysisMaterial.dispose();
     this.green.dispose();
     this.playerHologram?.dispose();
+    this.trainerPhoto?.dispose();
     this.environment.dispose();
     this.renderer.dispose();
     this.renderer.forceContextLoss();

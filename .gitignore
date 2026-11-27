@@ -26,3 +26,7 @@ tests/screenshots/.results/
 /assets-src/rocketbox/
 /assets-src/avatars/
 __pycache__/
+/assets-src/figuren/
+/assets-src/mocap/
+/assets-src/gesichter/
+/assets-src/kleidung-test/

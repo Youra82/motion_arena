@@ -19,7 +19,7 @@ test("Arena lädt lokal bei Bedarf, rendert in 3D und zählt im Demo-Training", 
     return (await cache.keys()).map((request) => new URL(request.url).pathname);
   });
   expect((await cachedFiles()).some((url) => url.startsWith("/arena/"))).toBe(false);
-  expect(requests.some((url) => /arena-three-|trainer\.glb/.test(url))).toBe(false);
+  expect(requests.some((url) => /arena-three-|\.glb$/.test(url))).toBe(false); // keine Figur vor dem Training
 
   await page.getByRole("button", { name: "Demo ohne Kamera ansehen" }).click();
   await expect(page.locator(".modes").getByRole("button", { name: "Arena", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -30,7 +30,8 @@ test("Arena lädt lokal bei Bedarf, rendert in 3D und zählt im Demo-Training", 
   await expect(page.locator(".arena-checks .good").first()).toBeVisible();
   await expect(page.locator(".arena-timer progress")).toBeVisible();
   await expect(page.getByText(/\bbpm\b/)).toHaveCount(0);
-  await expect.poll(cachedFiles).toContain("/arena/trainer.glb");
+  // Figur der Standard-Avatare (Lukas) wird bei Bedarf geladen und offline zwischengespeichert
+  await expect.poll(cachedFiles).toContain("/arena/bodies/mpfb/lukas.glb");
 
   await page.getByRole("button", { name: /^Arena:/ }).click();
   await page.getByRole("dialog", { name: "Arena wählen" }).getByRole("button", { name: /Lebombo/ }).click();
