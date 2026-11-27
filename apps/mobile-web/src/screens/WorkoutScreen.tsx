@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ICONS, Icon, trainerPhoto } from "../components/common";
 import { actions, useApp } from "../store";
 import { exerciseById } from "../program/catalog";
 import { programView } from "../program/view";
 import { avatarById } from "../render/avatars";
 import { SHOW_DEMO } from "../demo-mode";
+import { PACE_SECONDS, REST_SECONDS } from "../program/planner";
+import { say, stopVoice } from "../voice";
 
 /**
  * Laufendes Training: eine Übung nach der anderen. Kniebeugen zählt die Kamera (Live-Training), die anderen Übungen
@@ -80,29 +82,131 @@ export function WorkoutScreen() {
   );
 }
 
+const READY_SECONDS = 10;
+
+/** Sprechbare Dosis, z. B. „10 Wiederholungen“ / „30 Sekunden“. */
+const doseText = (st: { reps?: number; seconds?: number }) => (st.reps ? `${st.reps} Wiederholungen` : `${st.seconds} Sekunden`);
+
+/**
+ * Aktuelle Übung. Automatischer Ablauf (Standard): Countdown → Übung startet von selbst (Kamera, Timer oder Takt mit
+ * Mitzählen) → Pause → nächster Satz. So muss man im Training nicht zum Handy laufen. „Anhalten“ schaltet auf Hand-Betrieb.
+ */
 function Current({ trainerId }: { trainerId: string }) {
   const run = useApp((s) => s.workout)!;
+  const auto = useApp((s) => s.settings.autoFlow);
+  const voiceOn = useApp((s) => s.settings.voice);
   const step = run.steps[run.index]!;
   const e = exerciseById(step.exerciseId)!;
   const setNo = step.setsDone + 1;
+  const speak = (t: string) => {
+    if (useApp.getState().settings.voice) say(t);
+  };
+
+  // „wait“ = Countdown/Pause, „work“ = Timer oder Takt läuft, „manual“ = Hand-Betrieb
+  const [phase, setPhase] = useState<"wait" | "work" | "manual">(auto ? "wait" : "manual");
+  const [deadline, setDeadline] = useState(0); // 0 = noch nicht gestellt (erst arm() setzt die Zeit)
+  const [resting, setResting] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
   const [left, setLeft] = useState<number | null>(step.seconds ?? null);
   const [runningTimer, setRunningTimer] = useState(false);
-  // Neuer Satz/neue Übung → Timer zurücksetzen
+  const [count, setCount] = useState(0);
+  const spoken = useRef<number | null>(null);
+  const setKey = `${run.index}:${step.setsDone}`;
+
+  /** Countdown bis zum nächsten Satz starten (nach einem Satz: Pause, sonst kurz bereit machen). */
+  const arm = () => {
+    const rest = useApp.getState().restUntil;
+    const isRest = rest !== null && rest > Date.now() + 1000;
+    const dl = isRest ? rest : Date.now() + READY_SECONDS * 1000;
+    setDeadline(dl);
+    setResting(isRest);
+    setNow(Date.now());
+    spoken.current = null;
+    setPhase("wait");
+    const what = step.setsDone > 0 ? `Satz ${setNo} von ${step.sets}, ${e.name}` : `${e.name}, ${doseText(step)}`;
+    speak(
+      isRest
+        ? `Geschafft. ${Math.round((dl - Date.now()) / 1000)} Sekunden Pause. Als Nächstes: ${what}.`
+        : `Als Nächstes: ${what}. Los in ${READY_SECONDS} Sekunden.`,
+    );
+  };
+
+  // Neuer Satz/neue Übung → zurücksetzen und (automatisch) Countdown starten
   useEffect(() => {
     setLeft(step.seconds ?? null);
     setRunningTimer(false);
-  }, [run.index, step.setsDone, step.seconds]);
+    setCount(0);
+    if (auto) arm();
+    else setPhase("manual");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setKey, auto]);
+
+  /** Satz beginnen: Kamera, Timer oder Takt. */
+  const begin = () => {
+    useApp.setState({ restUntil: null });
+    if (e.tracked) {
+      speak("Los!");
+      actions.workoutLive("camera");
+      return;
+    }
+    speak(step.seconds ? "Los!" : "Los! Ich zähle im Takt mit.");
+    setCount(0);
+    setPhase("work");
+    if (step.seconds) setRunningTimer(true);
+  };
+
+  // Countdown-Uhr
+  useEffect(() => {
+    if (phase !== "wait") return;
+    const t = setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(t);
+  }, [phase]);
+  const remain = Math.max(0, Math.ceil((deadline - now) / 1000));
+  useEffect(() => {
+    if (phase !== "wait" || deadline === 0 || spoken.current === remain) return;
+    spoken.current = remain;
+    if (remain === 10 && resting) speak("Noch 10 Sekunden.");
+    else if (remain >= 1 && remain <= 3) speak(String(remain));
+    else if (remain === 0) begin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remain, phase]);
+
+  // Timer (Halteübungen)
   useEffect(() => {
     if (!runningTimer) return;
     const t = setInterval(() => setLeft((l) => (l === null ? l : Math.max(0, l - 1))), 1000);
     return () => clearInterval(t);
   }, [runningTimer]);
   useEffect(() => {
-    if (runningTimer && left === 0) {
+    if (!runningTimer || left === null) return;
+    if (left === 0) {
       setRunningTimer(false);
       actions.workoutSetDone();
-    }
+    } else if (left === 10 && (step.seconds ?? 0) >= 20) speak("Noch 10 Sekunden.");
+    else if (left <= 3) speak(String(left));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [left, runningTimer]);
+
+  // Takt (Wiederholungen ohne Kamera): alle 3 s eine Wiederholung, die Stimme zählt mit
+  const pacing = phase === "work" && !step.seconds && !e.tracked;
+  useEffect(() => {
+    if (!pacing) return;
+    const t = setInterval(() => setCount((c) => c + 1), PACE_SECONDS * 1000);
+    return () => clearInterval(t);
+  }, [pacing]);
+  useEffect(() => {
+    if (!pacing || count === 0) return;
+    if (count >= (step.reps ?? 0)) actions.workoutSetDone();
+    else speak(String(count));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count, pacing]);
+
+  const stop = () => {
+    setPhase("manual");
+    setRunningTimer(false);
+    useApp.setState({ restUntil: null });
+    stopVoice();
+  };
 
   return (
     <section className="nx-current" aria-labelledby="aktuelle-uebung">
@@ -113,7 +217,37 @@ function Current({ trainerId }: { trainerId: string }) {
         Satz {setNo} von {step.sets}
       </p>
       <h1 id="aktuelle-uebung">{e.name}</h1>
-      <p className="nx-big-dose">{step.reps ? `${step.reps} Wiederholungen` : `${step.seconds} Sekunden`}</p>
+      <p className="nx-big-dose">{doseText(step)}</p>
+
+      {phase === "wait" && (
+        <div className={`nx-auto${resting ? " rest" : ""}`} role="timer" aria-label={`${resting ? "Pause" : "Start"} in ${remain} Sekunden`}>
+          <div className="nx-auto-ring" style={{ "--p": `${Math.min(1, remain / (resting ? REST_SECONDS : READY_SECONDS))}` } as CSSProperties}>
+            <b>{remain}</b>
+            <small>s</small>
+          </div>
+          <div className="nx-auto-text">
+            <strong>{resting ? "Pause" : "Gleich geht’s los"}</strong>
+            <span>{e.tracked ? "Dann startet die Kamera" : step.seconds ? "Dann läuft der Timer" : "Dann zählt die Stimme im Takt mit"}</span>
+          </div>
+          <div className="nx-auto-actions">
+            <button className="btn btn-primary" onClick={begin}>
+              Jetzt starten
+            </button>
+            <button className="btn btn-ghost" onClick={stop}>
+              Anhalten
+            </button>
+          </div>
+        </div>
+      )}
+
+      {pacing && (
+        <div className="nx-pace" role="status" aria-live="off">
+          <b>{count}</b>
+          <small>von {step.reps}</small>
+          <span>Takt: alle {PACE_SECONDS} s eine Wiederholung</span>
+        </div>
+      )}
+
       <ol className="nx-cues">
         {e.cues.map((c) => (
           <li key={c}>{c}</li>
@@ -141,7 +275,13 @@ function Current({ trainerId }: { trainerId: string }) {
             {left ?? step.seconds}
             <small>s</small>
           </div>
-          <button className="btn btn-primary nx-wide" onClick={() => setRunningTimer((r) => !r)}>
+          <button
+            className="btn btn-primary nx-wide"
+            onClick={() => {
+              if (phase === "wait") setPhase("work");
+              setRunningTimer((r) => !r);
+            }}
+          >
             <Icon d={runningTimer ? "M7 5v14M17 5v14" : ICONS.play} size={18} /> {runningTimer ? "Pause" : left !== step.seconds ? "Weiter" : "Timer starten"}
           </button>
           <button className="btn btn-ghost" onClick={() => actions.workoutSetDone()}>
@@ -158,6 +298,30 @@ function Current({ trainerId }: { trainerId: string }) {
       <button className="link-btn" onClick={() => actions.workoutSkip()}>
         Übung überspringen
       </button>
+
+      <div className="nx-auto-switches">
+        <label className="nx-switch">
+          <input type="checkbox" checked={auto} onChange={(ev) => actions.updateSettings({ autoFlow: ev.target.checked })} />
+          <span>Automatisch weiter</span>
+        </label>
+        <label className="nx-switch">
+          <input
+            type="checkbox"
+            checked={voiceOn}
+            onChange={(ev) => {
+              actions.updateSettings({ voice: ev.target.checked });
+              if (ev.target.checked) say("Sprachansage an.");
+              else stopVoice();
+            }}
+          />
+          <span>Sprachansage</span>
+        </label>
+      </div>
+      {auto && phase === "manual" && (
+        <button className="btn btn-ghost nx-wide" onClick={arm}>
+          Automatisch weiter ab hier
+        </button>
+      )}
     </section>
   );
 }
@@ -175,6 +339,10 @@ function Finished({
   programDone: ReturnType<typeof programView> | null;
   didSomething: boolean;
 }) {
+  useEffect(() => {
+    if (useApp.getState().settings.voice) say(didSomething ? "Geschafft! Training beendet. Stark gemacht." : "Training beendet.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <section className="nx-finished" aria-live="polite">
       <span className="nx-finished-badge" aria-hidden="true">

@@ -170,10 +170,15 @@ export function dose(e: Exercise, a: Answers, phase: number, level: number = LEV
   return { sets, reps: clamp(base + lvl * 2 + phase * 2 + o, 4, 25) };
 }
 
+/** Pause nach jedem Satz (Sekunden) – so rechnet der Plan und so lange wartet der automatische Ablauf. */
+export const REST_SECONDS = 30;
+/** Takt für Übungen ohne Kamera: eine Wiederholung alle 3 s. */
+export const PACE_SECONDS = 3;
+
 /** Geschätzte Sekunden eines Schritts: Ausführung (3 s je Wiederholung) plus 30 s Pause je Satz. */
 export function stepSeconds(s: Step): number {
-  const work = s.seconds ?? (s.reps ?? 0) * 3;
-  return s.sets * (work + 30);
+  const work = s.seconds ?? (s.reps ?? 0) * PACE_SECONDS;
+  return s.sets * (work + REST_SECONDS);
 }
 
 const WARMUP_SECONDS = 120;

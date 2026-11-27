@@ -119,3 +119,36 @@ describe("Programm-Training", () => {
     expect(useApp.getState().program).toBeNull();
   });
 });
+
+describe("Automatischer Ablauf", () => {
+  beforeEach(() => {
+    actions.removeProgram();
+    useApp.setState({ workout: null, history: [], screen: "home", restUntil: null });
+  });
+
+  it("nach einem Satz beginnt eine Pause, nach dem letzten Satz und beim Überspringen nicht", () => {
+    actions.updateSettings({ autoFlow: true });
+    actions.startSingle("glute-bridge");
+    const t0 = Date.now();
+    actions.workoutSetDone();
+    const rest = useApp.getState().restUntil!;
+    expect(rest).toBeGreaterThanOrEqual(t0 + 29_000);
+    expect(rest).toBeLessThanOrEqual(Date.now() + 30_000);
+    actions.workoutSetDone();
+    actions.workoutSetDone(); // letzter Satz → Training fertig, keine Pause mehr
+    expect(useApp.getState().workout!.index).toBe(1);
+    expect(useApp.getState().restUntil).toBeNull();
+
+    actions.startSingle("glute-bridge");
+    actions.workoutSkip();
+    expect(useApp.getState().restUntil).toBeNull();
+  });
+
+  it("ohne automatischen Ablauf keine Pause", () => {
+    actions.updateSettings({ autoFlow: false });
+    actions.startSingle("glute-bridge");
+    actions.workoutSetDone();
+    expect(useApp.getState().restUntil).toBeNull();
+    actions.updateSettings({ autoFlow: true });
+  });
+});

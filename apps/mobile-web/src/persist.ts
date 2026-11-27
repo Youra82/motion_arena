@@ -32,9 +32,13 @@ export interface Settings {
   arenaRoom: ArenaRoom;
   /** Echtbild ist Standard fürs Kamera-Training (ältere gespeicherte „Arena“-Voreinstellung wurde einmal umgestellt). */
   realView: boolean;
+  /** Automatischer Ablauf im Training: Countdown, Satz, Pause, nächster Satz – ohne zum Handy zu laufen. */
+  autoFlow: boolean;
+  /** Sprachansagen im Training. */
+  voice: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { modelVariant: "lite", defaultTarget: 10, defaultView: "echtbild", weeklyGoal: 3, tvVideo: "ask", room: DEFAULT_ROOM, avatar: DEFAULT_AVATAR, trainer: DEFAULT_AVATAR, arenaRoom: ARENA_ROOMS[0].id, realView: true };
+export const DEFAULT_SETTINGS: Settings = { modelVariant: "lite", defaultTarget: 10, defaultView: "echtbild", weeklyGoal: 3, tvVideo: "ask", room: DEFAULT_ROOM, avatar: DEFAULT_AVATAR, trainer: DEFAULT_AVATAR, arenaRoom: ARENA_ROOMS[0].id, realView: true, autoFlow: true, voice: true };
 
 /** Speicher des Browsers; null = gibt es nicht, "denied" = Zugriff verweigert (z. B. Datenschutzeinstellung). */
 function storage(): Storage | null | "denied" {
@@ -130,6 +134,8 @@ export function loadSettings(): Settings {
     avatar: isAvatarId(v.avatar) ? v.avatar : DEFAULT_SETTINGS.avatar,
     trainer: isAvatarId(v.trainer) ? v.trainer : DEFAULT_SETTINGS.trainer,
     arenaRoom: isArenaRoom(v.arenaRoom) ? v.arenaRoom : DEFAULT_SETTINGS.arenaRoom,
+    autoFlow: v.autoFlow !== false,
+    voice: v.voice !== false,
   };
 }
 

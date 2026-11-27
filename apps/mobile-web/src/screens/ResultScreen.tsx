@@ -1,5 +1,9 @@
 import { summarize } from "@motion-arena/motion-scoring";
+import { useEffect, useState } from "react";
 import { actions, useApp } from "../store";
+import { say } from "../voice";
+
+const BACK_SECONDS = 5;
 
 export function ResultScreen() {
   const session = useApp((s) => s.session);
@@ -7,6 +11,24 @@ export function ResultScreen() {
   const s = summarize(session);
   // Teil eines laufenden Trainings (Programm/eigenes Training)? Dann geht es von hier zur nächsten Übung.
   const inWorkout = useApp((st) => !!st.workout && st.workout.index < st.workout.steps.length);
+  // Automatischer Ablauf: nach einem gezählten Satz von selbst zurück ins Training (Pause, dann nächster Satz)
+  const auto = useApp((st) => st.settings.autoFlow);
+  const autoBack = inWorkout && auto && source === "camera" && s.reps > 0;
+  const [stay, setStay] = useState(false);
+  const [back, setBack] = useState(BACK_SECONDS);
+  useEffect(() => {
+    if (autoBack && useApp.getState().settings.voice) say(`${s.reps} ${s.reps === 1 ? "Wiederholung" : "Wiederholungen"}. Stark!`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!autoBack || stay) return;
+    if (back <= 0) {
+      actions.returnToWorkout(true);
+      return;
+    }
+    const t = setTimeout(() => setBack((b) => b - 1), 1000);
+    return () => clearTimeout(t);
+  }, [autoBack, stay, back]);
 
   const stats: Array<[string, string]> = [
     ["Wiederholungen", `${s.reps} / ${s.targetReps}`],
@@ -21,6 +43,15 @@ export function ResultScreen() {
     <main className="result">
       <p className="eyebrow">Ergebnis · Kniebeugen{source === "demo" ? " · DEMO" : ""}</p>
       <h1>{s.reps >= s.targetReps ? "Ziel erreicht" : "Training beendet"}</h1>
+
+      {autoBack && !stay && (
+        <div className="result-auto" role="status">
+          <span>Satz gezählt · weiter im Training in {back} s</span>
+          <button className="btn btn-ghost" style={{ minHeight: 40 }} onClick={() => setStay(true)}>
+            Hier bleiben
+          </button>
+        </div>
+      )}
 
       <div className="stats">
         {stats.map(([label, value]) => (

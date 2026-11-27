@@ -1952,3 +1952,161 @@
     transition: none;
   }
 }
+
+/* Automatischer Ablauf im Training: Countdown-Ring, Takt-Zähler, Schalter */
+.nx-auto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 16px;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 4px 0 6px;
+  padding: 16px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, rgba(255, 112, 75, 0.16), rgba(20, 33, 38, 0.95));
+  border: 1px solid rgba(255, 112, 75, 0.35);
+}
+.nx-auto.rest {
+  background: linear-gradient(160deg, rgba(71, 212, 208, 0.14), rgba(20, 33, 38, 0.95));
+  border-color: rgba(71, 212, 208, 0.35);
+}
+.nx-auto-ring {
+  --c: #ff704b;
+  flex: none;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  padding-top: 22px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(closest-side, #17262b 82%, transparent 83%),
+    conic-gradient(var(--c) calc(var(--p) * 360deg), rgba(244, 242, 236, 0.1) 0);
+}
+.nx-auto.rest .nx-auto-ring {
+  --c: #47d4d0;
+}
+.nx-auto-ring b {
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.nx-auto-ring small {
+  font-size: 14px;
+  color: var(--muted);
+  margin-left: 2px;
+}
+.nx-auto-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.nx-auto-text strong {
+  font-size: 19px;
+}
+.nx-auto-text > span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.nx-auto-actions {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 10px;
+}
+.nx-auto-actions .btn {
+  min-height: 46px;
+  padding: 0 12px;
+  font-size: 16px;
+  white-space: nowrap;
+}
+.nx-pace {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.nx-pace b {
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.nx-pace small {
+  font-size: 20px;
+  color: var(--muted);
+}
+.nx-pace span {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+.nx-auto-switches {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  margin-top: 10px;
+}
+.nx-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.nx-switch input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 40px;
+  height: 24px;
+  border-radius: 12px;
+  background: rgba(244, 242, 236, 0.18);
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.nx-switch input::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f4f2ec;
+  transition: transform 0.2s;
+}
+.nx-switch input:checked {
+  background: #47d4d0;
+}
+.nx-switch input:checked::after {
+  transform: translateX(16px);
+}
+.nx-switch input:focus-visible {
+  outline: 2px solid #f4f2ec;
+  outline-offset: 2px;
+}
+.result-auto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(71, 212, 208, 0.12);
+  border: 1px solid rgba(71, 212, 208, 0.35);
+}
+.result-auto .btn {
+  white-space: nowrap;
+  flex: none;
+}

@@ -30,7 +30,8 @@ import {
   type Settings,
   type StoredProgram,
 } from "./persist";
-import { createPlan, sessionAt, totalSessions, type Answers, type Step } from "./program/planner";
+import { REST_SECONDS, createPlan, sessionAt, totalSessions, type Answers, type Step } from "./program/planner";
+import { unlockVoice } from "./voice";
 import { exerciseById } from "./program/catalog";
 
 /** Hauptbereiche (untere Navigation), Programm-Seiten, Live-Training und Ergebnis. */
@@ -140,6 +141,8 @@ export interface AppState {
   custom: CustomWorkout | null;
   /** Laufendes Training mit mehreren Schritten. */
   workout: WorkoutRun | null;
+  /** Automatischer Ablauf: Ende der Pause nach dem letzten Satz (Date.now()-Zeit), sonst null. */
+  restUntil: number | null;
 }
 
 const initialHud: Hud = {
@@ -181,6 +184,7 @@ export const useApp = create<AppState>(() => ({
   program: loadProgram(),
   custom: loadCustom(),
   workout: loadWorkout(),
+  restUntil: null,
 }));
 
 // Training (Stand je Schritt) laufend sichern – „Fortsetzen“ klappt auch nach dem Schließen der App
@@ -336,6 +340,7 @@ export const actions = {
   },
   /** Nächste offene Einheit des Programms starten (Übersicht der Schritte). */
   startProgramSession() {
+    unlockVoice();
     const p = useApp.getState().program;
     if (!p) return;
     const plan = createPlan(p.answers);
@@ -348,11 +353,13 @@ export const actions = {
     useApp.setState({ custom });
   },
   startCustom(custom: CustomWorkout) {
+    unlockVoice();
     actions.saveCustom(custom);
     useApp.setState({ workout: toRun("custom", custom.name, custom.steps), screen: "workout", error: null, engineStatus: "idle" });
   },
   /** Einzelne Übung aus „Übungen“ als geführtes Training starten (Standard: 3 × 10 bzw. 2 × 30 s). */
   startSingle(exerciseId: string) {
+    unlockVoice();
     const e = exerciseById(exerciseId);
     if (!e) return;
     const step: Step = e.measure === "reps" ? { exerciseId, sets: 3, reps: 10 } : { exerciseId, sets: 2, seconds: 30 };
@@ -360,6 +367,7 @@ export const actions = {
   },
   /** Kniebeugen mit Kamera als eigenes Training (3 Sätze) starten – so lässt es sich auf der Startseite fortsetzen. */
   startSquat(target: number) {
+    unlockVoice();
     const e = exerciseById("squat");
     if (!e) return;
     useApp.setState({ workout: toRun("single", e.name, [{ exerciseId: "squat", sets: 3, reps: target }]), error: null });
@@ -382,7 +390,10 @@ export const actions = {
       const run = s.workout;
       if (!run || run.index >= run.steps.length) return {};
       const steps = run.steps.map((st, i) => (i === run.index ? { ...st, setsDone: Math.min(st.sets, st.setsDone + 1) } : st));
-      return advance({ ...run, steps }, s.program);
+      const next = advance({ ...run, steps }, s.program);
+      // automatischer Ablauf: danach Pause, dann geht es von selbst weiter
+      const more = next.workout.index < next.workout.steps.length;
+      return { ...next, restUntil: s.settings.autoFlow && more ? Date.now() + REST_SECONDS * 1000 : null };
     });
   },
   /** Aktuelle Übung überspringen. */
@@ -391,7 +402,7 @@ export const actions = {
       const run = s.workout;
       if (!run || run.index >= run.steps.length) return {};
       const steps = run.steps.map((st, i) => (i === run.index ? { ...st, skipped: true } : st));
-      return advance({ ...run, steps }, s.program);
+      return { ...advance({ ...run, steps }, s.program), restUntil: null };
     });
   },
   /** Kamera-Übung des aktuellen Schritts live starten (Kniebeugen). */
@@ -408,10 +419,12 @@ export const actions = {
   },
   /** Zurück zum laufenden Training (z. B. nach Abbruch der Kamera). */
   openWorkout() {
-    if (useApp.getState().workout) useApp.setState({ screen: "workout", error: null, engineStatus: "idle" });
+    unlockVoice();
+    if (useApp.getState().workout) useApp.setState({ screen: "workout", error: null, engineStatus: "idle", restUntil: null });
   },
   /** Zuletzt gestartetes Training noch einmal von vorn (Stand zurücksetzen). */
   restartWorkout() {
+    unlockVoice();
     const w = useApp.getState().workout;
     if (!w) return;
     const fresh: WorkoutRun = { ...w, steps: w.steps.map((s) => ({ ...s, setsDone: 0, skipped: false })), index: 0, counted: false };
