@@ -55,6 +55,13 @@ export function HomeScreen() {
   const view = program ? programView(program) : null;
   const running = workout && workout.index < workout.steps.length ? workout : null;
   const totalReps = history.reduce((t, e) => t + e.reps, 0);
+  // „Neu starten“: zuletzt gestartetes Training – sonst die letzte Kniebeugen-Einheit aus dem Verlauf
+  const lastSquat = history.at(-1);
+  const restart = workout
+    ? { label: `Neu starten: ${workout.title}`, run: () => actions.restartWorkout() }
+    : lastSquat
+      ? { label: `Neu starten: Kniebeugen ${lastSquat.targetReps}×`, run: () => actions.openLive("camera", lastSquat.targetReps) }
+      : null;
   useEffect(() => {
     if (tvStatus === "connected") setTvOpen(false);
   }, [tvStatus]);
@@ -96,37 +103,44 @@ export function HomeScreen() {
           <p className="nx-meta">
             Mit {trainer.name} · {roomName}
           </p>
-          {running ? (
-            <button className="nx-start" onClick={() => actions.openWorkout()}>
-              <span className="nx-start-icon">
-                <Icon d={ICONS.play} size={16} />
-              </span>
-              Training fortsetzen
-            </button>
-          ) : view && !view.finished ? (
-            <button className="nx-start" onClick={() => actions.startProgramSession()}>
-              <span className="nx-start-icon">
-                <Icon d={ICONS.play} size={16} />
-              </span>
-              Weiter: {view.next.title}
-            </button>
-          ) : (
-            <button className="nx-start" onClick={() => actions.navigate("training")}>
-              <span className="nx-start-icon">
-                <Icon d={ICONS.next} size={16} />
-              </span>
-              Training wählen
-            </button>
-          )}
-          {running ? (
-            <span className="nx-start-note">
-              Übung {running.index + 1} von {running.steps.length}
-            </span>
-          ) : view && !view.finished ? (
-            <span className="nx-start-note">
-              {view.name} · Woche {view.week} · Tag {view.dayInWeek} · {view.next.minutes} Min
-            </span>
-          ) : null}
+          {(() => {
+            // Hauptkarte vorn, weitere Möglichkeiten als Karten dahinter gestapelt (jede ragt als Knopfstreifen hervor)
+            const primary = running
+              ? { title: "Training fortsetzen", sub: `${running.title} · Übung ${running.index + 1} von ${running.steps.length}`, icon: ICONS.play, run: () => actions.openWorkout() }
+              : view && !view.finished
+                ? { title: `Weiter: ${view.next.title}`, sub: `${view.name} · Woche ${view.week} · Tag ${view.dayInWeek} · ${view.next.minutes} Min`, icon: ICONS.play, run: () => actions.startProgramSession() }
+                : { title: "Training wählen", sub: "Übungen und Programme", icon: ICONS.next, run: () => actions.navigate("training") };
+            const extras: Array<{ label: string; icon: string; run: () => void }> = [];
+            if (restart) extras.push({ label: restart.label, icon: ICONS.restart, run: restart.run });
+            if (running || (view && !view.finished)) extras.push({ label: "Anderes Training", icon: ICONS.next, run: () => actions.navigate("training") });
+            return (
+              <div className="nx-stack" style={{ height: 76 + extras.length * 50 }}>
+                <button className="nx-start nx-stack-main" onClick={primary.run}>
+                  <span className="nx-start-icon">
+                    <Icon d={primary.icon} size={16} />
+                  </span>
+                  <span className="nx-stack-text">
+                    <b>{primary.title}</b>
+                    <small>{primary.sub}</small>
+                  </span>
+                </button>
+                {extras
+                  .map((x, i) => (
+                    <button
+                      key={x.label}
+                      className="nx-stack-card"
+                      style={{ top: 50 * (i + 1), zIndex: 5 - (i + 1), transform: `scale(${(1 - 0.045 * (i + 1)).toFixed(3)})` }}
+                      onClick={x.run}
+                    >
+                      <span className="nx-stack-icon">
+                        <Icon d={x.icon} size={15} />
+                      </span>
+                      {x.label}
+                    </button>
+                  ))}
+              </div>
+            );
+          })()}
         </div>
       </section>
 

@@ -30,9 +30,11 @@ export interface Settings {
   /** Trainer-Avatar (macht die Übung vor). */
   trainer: string;
   arenaRoom: ArenaRoom;
+  /** Echtbild ist Standard fürs Kamera-Training (ältere gespeicherte „Arena“-Voreinstellung wurde einmal umgestellt). */
+  realView: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { modelVariant: "lite", defaultTarget: 10, defaultView: "arena", weeklyGoal: 3, tvVideo: "ask", room: DEFAULT_ROOM, avatar: DEFAULT_AVATAR, trainer: DEFAULT_AVATAR, arenaRoom: ARENA_ROOMS[0].id };
+export const DEFAULT_SETTINGS: Settings = { modelVariant: "lite", defaultTarget: 10, defaultView: "echtbild", weeklyGoal: 3, tvVideo: "ask", room: DEFAULT_ROOM, avatar: DEFAULT_AVATAR, trainer: DEFAULT_AVATAR, arenaRoom: ARENA_ROOMS[0].id, realView: true };
 
 /** Speicher des Browsers; null = gibt es nicht, "denied" = Zugriff verweigert (z. B. Datenschutzeinstellung). */
 function storage(): Storage | null | "denied" {
@@ -113,7 +115,12 @@ export function loadSettings(): Settings {
   return {
     modelVariant: v.modelVariant === "full" ? "full" : "lite",
     defaultTarget: [5, 10, 15, 20].includes(v.defaultTarget as number) ? (v.defaultTarget as number) : DEFAULT_SETTINGS.defaultTarget,
-    defaultView: typeof v.defaultView === "string" && isViewMode(v.defaultView) ? v.defaultView : DEFAULT_SETTINGS.defaultView,
+    // Einmalige Umstellung: Training mit Kamera startet im Echtbild (Trainer real neben dir), außer man wählt bewusst anders
+    defaultView:
+      typeof v.defaultView === "string" && isViewMode(v.defaultView) && (v.realView === true || v.defaultView !== "arena")
+        ? v.defaultView
+        : DEFAULT_SETTINGS.defaultView,
+    realView: true,
     weeklyGoal:
       typeof v.weeklyGoal === "number" && Number.isInteger(v.weeklyGoal) && v.weeklyGoal >= 1 && v.weeklyGoal <= 7
         ? v.weeklyGoal
@@ -194,6 +201,61 @@ export function loadCustom(): CustomWorkout | null {
 
 export function saveCustom(c: CustomWorkout): boolean {
   return write(CUSTOM_KEY, c);
+}
+
+/**
+ * Laufendes bzw. zuletzt gestartetes Training (Fortsetzen / Neu starten auf der Startseite). Gespeichert werden die
+ * Schritte und der Stand je Schritt; kaputte Daten werden verworfen.
+ */
+const WORKOUT_KEY = "motion-arena.workout.v1";
+
+export interface StoredWorkoutStep extends Step {
+  setsDone: number;
+  skipped: boolean;
+}
+
+export interface StoredWorkout {
+  origin: "program" | "custom" | "single";
+  title: string;
+  steps: StoredWorkoutStep[];
+  index: number;
+  programIndex?: number;
+  counted: boolean;
+}
+
+export function loadWorkout(): StoredWorkout | null {
+  const v = read<Record<string, unknown>>(WORKOUT_KEY);
+  if (!v || typeof v !== "object" || !Array.isArray(v.steps)) return null;
+  if (v.origin !== "program" && v.origin !== "custom" && v.origin !== "single") return null;
+  const steps: StoredWorkoutStep[] = [];
+  for (const raw of v.steps) {
+    if (!isStep(raw)) return null;
+    const x = raw as unknown as Record<string, unknown>;
+    const setsDone = Number.isInteger(x.setsDone) ? Math.max(0, Math.min(raw.sets, x.setsDone as number)) : 0;
+    steps.push({ ...raw, setsDone, skipped: x.skipped === true });
+  }
+  if (!steps.length) return null;
+  const index = Number.isInteger(v.index) ? Math.max(0, Math.min(steps.length, v.index as number)) : 0;
+  return {
+    origin: v.origin,
+    title: typeof v.title === "string" ? v.title.slice(0, 60) : "Training",
+    steps,
+    index,
+    ...(Number.isInteger(v.programIndex) ? { programIndex: v.programIndex as number } : {}),
+    counted: v.counted === true,
+  };
+}
+
+export function saveWorkout(w: StoredWorkout | null): boolean {
+  if (w) return write(WORKOUT_KEY, w);
+  try {
+    const st = storage();
+    if (!st || st === "denied") return false;
+    st.removeItem(WORKOUT_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**

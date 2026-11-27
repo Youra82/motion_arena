@@ -97,6 +97,20 @@ describe("Programm-Training", () => {
     expect(useApp.getState().screen).toBe("builder");
   });
 
+  it("verlassen behält das Training (Fortsetzen); Neu starten beginnt von vorn", () => {
+    actions.startCustom({ name: "Test", steps: [{ exerciseId: "glute-bridge", sets: 2, reps: 10 }, { exerciseId: "dead-bug", sets: 1, reps: 8 }] });
+    actions.workoutSetDone();
+    actions.endWorkout();
+    expect(useApp.getState().screen).toBe("home");
+    expect(useApp.getState().workout!.steps[0]!.setsDone).toBe(1);
+    actions.openWorkout();
+    expect(useApp.getState().screen).toBe("workout");
+    actions.restartWorkout();
+    const w = useApp.getState().workout!;
+    expect(w.index).toBe(0);
+    expect(w.steps.every((st) => st.setsDone === 0 && !st.skipped)).toBe(true);
+  });
+
   it("eigenes Training startet und wird gespeichert", () => {
     actions.startCustom({ name: "Test", steps: [{ exerciseId: "glute-bridge", sets: 1, reps: 10 }] });
     expect(useApp.getState().custom?.name).toBe("Test");

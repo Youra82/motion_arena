@@ -23,6 +23,8 @@ import {
   saveCustom,
   saveHistory,
   saveProgram,
+  loadWorkout,
+  saveWorkout,
   saveSettings,
   type CustomWorkout,
   type Settings,
@@ -178,8 +180,13 @@ export const useApp = create<AppState>(() => ({
   targetReps: initialSettings.defaultTarget,
   program: loadProgram(),
   custom: loadCustom(),
-  workout: null,
+  workout: loadWorkout(),
 }));
+
+// Training (Stand je Schritt) laufend sichern – „Fortsetzen“ klappt auch nach dem Schließen der App
+useApp.subscribe((s, prev) => {
+  if (s.workout !== prev.workout && s.workout) saveWorkout(s.workout);
+});
 
 const toRun = (origin: WorkoutRun["origin"], title: string, steps: Step[], programIndex?: number): WorkoutRun => ({
   origin,
@@ -231,7 +238,7 @@ export const actions = {
       feedback: null,
       session: createSession(targetReps),
       // Kameratraining startet immer mit der gespeicherten Standard-Ansicht (Analyse/Demo überschreiben sie nicht).
-      viewMode: view ?? (liveMode === "analysis" ? "muskel" : source === "demo" ? DEFAULT_SETTINGS.defaultView : s.settings.defaultView),
+      viewMode: view ?? (liveMode === "analysis" ? "muskel" : source === "demo" ? "arena" : s.settings.defaultView),
     }));
   },
   setViewMode(viewMode: ViewMode) {
@@ -396,8 +403,16 @@ export const actions = {
   openWorkout() {
     if (useApp.getState().workout) useApp.setState({ screen: "workout", error: null, engineStatus: "idle" });
   },
+  /** Zuletzt gestartetes Training noch einmal von vorn (Stand zurücksetzen). */
+  restartWorkout() {
+    const w = useApp.getState().workout;
+    if (!w) return;
+    const fresh: WorkoutRun = { ...w, steps: w.steps.map((s) => ({ ...s, setsDone: 0, skipped: false })), index: 0, counted: false };
+    useApp.setState({ workout: fresh, screen: "workout", error: null, engineStatus: "idle" });
+  },
+  /** Training verlassen: bleibt gespeichert (Startseite bietet „Fortsetzen“ und „Neu starten“). */
   endWorkout() {
-    useApp.setState({ workout: null, screen: "home", error: null, engineStatus: "idle" });
+    useApp.setState({ screen: "home", error: null, engineStatus: "idle" });
   },
   /** Verlauf löschen; false, wenn der Speicher das Löschen verweigert (Verlauf bleibt dann sichtbar). */
   clearHistory(): boolean {

@@ -1,5 +1,6 @@
 import { LM, SKELETON_EDGES, type Landmark } from "@motion-arena/shared";
 import { drawRoom, type RoomDef } from "./rooms";
+import { ROOM_GROUND, conceptImage, roomBackdrop } from "./concept-art";
 import { drawAvatar, type AvatarDef } from "./avatars";
 import type { ViewMode } from "../store";
 import { bodyMesh, bodyShape, type Pt } from "./body-shapes";
@@ -72,6 +73,8 @@ export interface DrawInput {
   bodyLoad?: BodyLoadResult | null;
   jointSpeeds?: ReadonlyMap<number, number> | null;
   ring: RingState;
+  /** Training: rechts neben dir steht der Trainer – du stehst dann links der Mitte. */
+  besideTrainer?: boolean;
 }
 
 const VIS = 0.5;
@@ -97,7 +100,7 @@ function drawBackdrop(ctx: CanvasRenderingContext2D, v: Viewport): void {
 function drawVideo(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, v: Viewport, f: Fit, alpha = 1): void {
   ctx.save();
   ctx.globalAlpha = alpha;
-  if (v.mirror) ctx.setTransform(-1, 0, 0, 1, v.cw, 0);
+  if (v.mirror) ctx.setTransform(-1, 0, 0, 1, 2 * f.ox + f.dw, 0);
   ctx.drawImage(video, f.ox, f.oy, f.dw, f.dh);
   ctx.restore();
 }
@@ -164,7 +167,7 @@ function drawMask(ctx: CanvasRenderingContext2D, mask: HTMLCanvasElement, v: Vie
   if (!matted) return;
   const cutout = blendedMask(matted, performance.now()) ?? matted;
   ctx.save();
-  if (v.mirror) ctx.setTransform(-1, 0, 0, 1, v.cw, 0);
+  if (v.mirror) ctx.setTransform(-1, 0, 0, 1, 2 * f.ox + f.dw, 0);
   ctx.shadowColor = "#a5ff3b";
   ctx.shadowBlur = 18;
   ctx.drawImage(cutout, f.ox, f.oy, f.dw, f.dh);
@@ -674,14 +677,59 @@ export function usablePose(raw: Landmark[] | null, v: Viewport, f: Fit): Landmar
   return torso >= 4 ? lms : null;
 }
 
-export function drawFrame(d: DrawInput): void {
+/** Bodenlinie (Canvas-y) im Raumbild – mit demselben Zuschnitt wie drawCover. */
+export function roomFloorY(room: RoomDef, w: number, h: number): number {
+  const ground = ROOM_GROUND[room.nr]?.player ?? 0.85;
+  const img = typeof Image === "function" ? conceptImage(roomBackdrop(room.nr)) : null;
+  if (!img?.naturalWidth) return h * ground;
+  const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const dh = img.naturalHeight * scale;
+  return (h - dh) / 2 + ground * dh;
+}
+
+/** Standhöhe der Person (Pixel bei Grund-Zuschnitt): Höchstwert der letzten 3 s – Kniebeugen und Abstand ändern die Größe nicht. */
+let standSamples: Array<{ at: number; px: number }> = [];
+
+/**
+ * Raum-Ansichten (z. B. Silhouette vor dem Raumbild): Die Person wird auf den Boden des Raumbilds gestellt, in fester
+ * Größe – statt dort, wo sie zufällig im Kamerabild steht (sonst schwebt sie im Raum).
+ */
+export function roomFit(v: Viewport, base: Fit, lms: Landmark[], room: RoomDef, now: number, beside: boolean): Fit {
+  const seen = (i: number) => (lms[i] && lms[i]!.visibility >= VIS ? toPx(lms[i]!, v, base) : null);
+  const feet = [seen(LM.LEFT_ANKLE), seen(LM.RIGHT_ANKLE)].filter((p): p is [number, number] => !!p);
+  const hips = [seen(LM.LEFT_HIP), seen(LM.RIGHT_HIP)].filter((p): p is [number, number] => !!p);
+  const nose = seen(LM.NOSE);
+  if (!feet.length || !hips.length || !nose) return base;
+  const ankleY = Math.max(...feet.map((p) => p[1]));
+  const soles = [seen(LM.LEFT_HEEL), seen(LM.RIGHT_HEEL), seen(LM.LEFT_FOOT_INDEX), seen(LM.RIGHT_FOOT_INDEX)].filter((p): p is [number, number] => !!p);
+  standSamples = [...standSamples.filter((s) => now - s.at < 3000), { at: now, px: (ankleY - nose[1]) * 1.12 }];
+  // Sohle auf den Raumboden (nicht den Knöchel)
+  const feetY = soles.length ? Math.max(ankleY, ...soles.map((p) => p[1])) : ankleY + (ankleY - nose[1]) * 0.045;
+  const stand = Math.max(...standSamples.map((s) => s.px));
+  if (stand < 8) return base;
+  const portrait = v.cw < v.ch;
+  const k = (v.ch * (portrait ? 0.36 : 0.5)) / stand;
+  const personX = hips.reduce((t, p) => t + p[0], 0) / hips.length;
+  const nx = (personX - base.ox) / base.dw;
+  const ny = (feetY - base.oy) / base.dh;
+  const dw = base.dw * k;
+  const dh = base.dh * k;
+  const targetX = v.cw * (beside ? (portrait ? 0.27 : 0.34) : 0.5);
+  return { ox: targetX - nx * dw, oy: roomFloorY(room, v.cw, v.ch) - ny * dh, dw, dh };
+}
+
+/** Zeichnet eine Ansicht; liefert den verwendeten Zuschnitt (für Figuren, die daneben stehen sollen). */
+export function drawFrame(d: DrawInput): Fit {
   const { ctx, v, mode, video } = d;
-  const f = coverFit(v);
+  let f = coverFit(v);
   const lms = usablePose(d.landmarks, v, f);
   ctx.clearRect(0, 0, v.cw, v.ch);
 
   const hasVideo = !!video && video.readyState >= 2;
   const splitImage = mode === "hybrid" && hasVideo && lms && d.mask;
+  // Hintergrund ist das Raumbild (nicht das Kamerabild): Person auf den Raumboden stellen
+  const roomBackground = !!d.room && !((mode === "echtbild" || mode === "hybrid") && hasVideo && !splitImage);
+  if (lms && roomBackground) f = roomFit(v, f, lms, d.room!, d.ring.now, !!d.besideTrainer);
   if ((mode === "echtbild" || mode === "hybrid") && hasVideo && !splitImage) drawVideo(ctx, video!, v, f);
   else if (d.room) drawRoom(ctx, d.room, v.cw, v.ch, roomLight(d.ring));
   else drawBackdrop(ctx, v);
@@ -694,7 +742,7 @@ export function drawFrame(d: DrawInput): void {
       ctx.beginPath();
       ctx.rect(0, 0, split, v.ch);
       ctx.clip();
-      if (v.mirror) ctx.setTransform(-1, 0, 0, 1, v.cw, 0);
+      if (v.mirror) ctx.setTransform(-1, 0, 0, 1, 2 * f.ox + f.dw, 0);
       ctx.drawImage(foreground, f.ox, f.oy, f.dw, f.dh);
       ctx.restore();
       ctx.save();
@@ -729,4 +777,5 @@ export function drawFrame(d: DrawInput): void {
     if (mode === "silhouette" && !d.mask) drawSkeleton(ctx, lms, v, f, 0.8); // Maske noch nicht da / Demo
     drawPrecisionRing(ctx, lms, v, f, d.ring);
   }
+  return f;
 }

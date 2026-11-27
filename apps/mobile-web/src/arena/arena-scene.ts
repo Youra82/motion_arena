@@ -24,6 +24,8 @@ export interface ArenaFrame {
   kneeAngle?: number | null;
   mask: HTMLCanvasElement | null;
   demo: boolean;
+  /** Kniebeugen-Training: der Trainer steht in jeder Ansicht neben dir und macht vor. */
+  squat?: boolean;
   now: number;
   activeMs: number;
   running: boolean;

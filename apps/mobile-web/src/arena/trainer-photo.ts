@@ -24,7 +24,7 @@ export class TrainerPhoto {
   constructor(base: string) {
     this.mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(1, 1),
-      new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.02, toneMapped: false, depthWrite: false }),
+      new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.02, toneMapped: false, depthWrite: false, side: THREE.DoubleSide }),
     );
     this.mesh.visible = false;
     this.mesh.renderOrder = 4;
@@ -56,7 +56,7 @@ export class TrainerPhoto {
    * Bild zur Tiefe zeigen und aufstellen. `ground` = Bodenpunkt des Trainers, `standHeight` = Körperhöhe (m),
    * `light` = Raumfarbe für eine leichte Anpassung an andere Räume als das Core Studio.
    */
-  update(flex: number, ground: THREE.Vector3, standHeight: number, camera: THREE.Camera, light?: THREE.Color): void {
+  update(flex: number, ground: THREE.Vector3, standHeight: number, camera: THREE.Camera, light?: THREE.Color, flip = false): void {
     if (!this.ready || !this.meta) return;
     const { frames, size, standPx } = this.meta;
     const target = Math.max(0, Math.min(100, flex));
@@ -68,7 +68,8 @@ export class TrainerPhoto {
       material.needsUpdate = true;
     }
     const metres = standHeight / standPx;
-    this.mesh.scale.set(size[0] * metres, size[1] * metres, 1);
+    // flip: gespiegelt (um die Fußmitte), damit Trainer und Spieler in dieselbe Richtung schauen
+    this.mesh.scale.set(size[0] * metres * (flip ? -1 : 1), size[1] * metres, 1);
     this.mesh.position.copy(ground);
     // zur Kamera drehen (nur um die Hochachse – die Figur bleibt aufrecht)
     this.mesh.rotation.set(0, Math.atan2(camera.position.x - ground.x, camera.position.z - ground.z), 0);

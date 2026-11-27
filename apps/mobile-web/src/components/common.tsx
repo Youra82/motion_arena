@@ -162,6 +162,7 @@ export const ICONS = {
   camera: "M4 8h3l2-3h6l2 3h3v11H4zM12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
   timer: "M12 8v5l3 2M9 2h6M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z",
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4",
+  restart: "M4 12a8 8 0 1 0 2.3-5.6M4 4v5h5",
 };
 
 /** Rahmen für die Hauptbereiche: Inhalt + untere Navigation. */

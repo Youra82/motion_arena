@@ -38,10 +38,10 @@ test("Avatar und Raum wählen, nach Neuladen erhalten, Demo zeigt den Avatar im 
   expect(stats.skin).toBeGreaterThan(50); // Hauttöne des Avatars
   await page.screenshot({ path: "tests/e2e/.results/screens/16-avatar-live.png" });
 
-  // Standard-Ansicht fürs Kameratraining bleibt unverändert (Avatar galt nur für diese Demo)
+  // Standard-Ansicht fürs Kameratraining bleibt unverändert: Echtbild (Avatar galt nur für diese Demo)
   await page.getByRole("button", { name: "Training beenden" }).click();
   await page.getByRole("button", { name: "Zur Startseite" }).click();
   await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Profil" }).click();
-  await expect(page.getByRole("button", { name: "Arena", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Echtbild", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect(errors).toEqual([]);
 });

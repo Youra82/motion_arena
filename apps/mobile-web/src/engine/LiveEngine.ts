@@ -11,7 +11,8 @@ import {
 import { actions, showFeedback, useApp, type EngineError, type Source, type ViewMode } from "../store";
 import { drawFrame, type Viewport } from "../render/draw";
 import { ArenaRenderer } from "../arena/arena-renderer";
-import { activeTimeMs } from "../arena/metrics";
+import { GUIDE_CYCLE_MS, activeTimeMs, squatFlex } from "../arena/metrics";
+import { drawTrainerBeside } from "../render/trainer-beside";
 import { roomById } from "../render/rooms";
 import { hasLiveStage } from "../view-modes";
 import { avatarById } from "../render/avatars";
@@ -392,12 +393,12 @@ export class LiveEngine {
           v, room: state.settings.arenaRoom, studioRoom: roomById(state.settings.room), avatar: state.settings.avatar, trainer: state.settings.trainer, mode: state.viewMode,
           pose, worldPose, bodyLoad: this.lastBodyLoad,
           speeds: wantsBodyLoad ? this.bodyLoad.jointSpeeds() : undefined, mask: this.mask, kneeAngle: features.kneeAngle,
-          demo: this.source === "demo", now, activeMs: activeTimeMs(session, now),
+          demo: this.source === "demo", squat: state.liveMode === "squat", now, activeMs: activeTimeMs(session, now),
           running: session.status === "running", precision: session.reps.at(-1)?.score.total ?? null,
           capture: usePhoneLink.getState().streaming,
         })) return;
       } else this.arena.leave(this.canvas);
-      drawFrame({
+      const fit = drawFrame({
         ctx,
         v,
         mode: state.viewMode === "arena" ? "hologramm" : state.viewMode,
@@ -410,7 +411,15 @@ export class LiveEngine {
         bodyLoad: this.lastBodyLoad,
         jointSpeeds: wantsBodyLoad ? this.bodyLoad.jointSpeeds() : null,
         ring: { depth, goodDepth: DEFAULT_SQUAT_OPTIONS.goodDepth, repFlashAt: this.repFlashAt, now },
+        besideTrainer: state.liveMode === "squat",
       });
+      // Training: Trainer steht auch in den Kamera-Ansichten neben dir und macht im Takt der Anleitung vor
+      if (state.liveMode === "squat") {
+        const session = useApp.getState().session;
+        const guide = session.status === "running" ? squatFlex((activeTimeMs(session, now) % GUIDE_CYCLE_MS) / GUIDE_CYCLE_MS, 94) : 0;
+        const real = this.source === "camera" && (state.viewMode === "echtbild" || state.viewMode === "hybrid");
+        drawTrainerBeside(ctx, v, fit, pose, state.settings.trainer, guide, now, real);
+      }
     }
   }
 

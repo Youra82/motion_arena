@@ -1677,3 +1677,127 @@
 .stage-card .stage-chip small {
   display: block;
 }
+
+
+/* Startseite: Fortsetzen / Neu starten / Anderes Training – alle Knöpfe gleich breit und gleich geformt */
+.nx-today .nx-start,
+.nx-subactions {
+  width: min(100%, 330px);
+}
+.nx-today .nx-start {
+  justify-content: flex-start;
+}
+.nx-subactions {
+  display: grid;
+  gap: 8px;
+  margin-top: 2px;
+}
+.nx-subactions button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 20px 0 8px;
+  border-radius: 999px;
+  background: rgba(10, 20, 24, 0.66);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(244, 242, 236, 0.24);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nx-sub-icon {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  background: rgba(244, 242, 236, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Startseite: gestapelte Karten – Hauptkarte vorn, weitere Möglichkeiten dahinter (jede ragt 50 px hervor) */
+.nx-stack {
+  position: relative;
+  width: min(100%, 340px);
+  margin-top: 6px;
+}
+.nx-stack > button {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 76px;
+  border-radius: 24px;
+  transform-origin: 50% 100%;
+  transition: transform 0.2s ease;
+}
+.nx-today .nx-start.nx-stack-main {
+  top: 0;
+  z-index: 5;
+  width: 100%;
+  margin-top: 0;
+  min-height: 76px;
+  border-radius: 24px;
+  padding: 0 18px 0 12px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.45);
+  animation: none;
+}
+.nx-stack-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+.nx-stack-text b {
+  font-size: 18px;
+  font-weight: 800;
+}
+.nx-stack-text small {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 230px;
+}
+.nx-stack-card {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 0 18px 12px;
+  border: 1px solid rgba(244, 242, 236, 0.26);
+  background: rgba(28, 62, 70, 0.97);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nx-stack-card + .nx-stack-card,
+.nx-stack-card:first-child {
+  background: rgba(22, 50, 57, 0.97);
+}
+.nx-stack-card:hover,
+.nx-stack-card:focus-visible {
+  border-color: rgba(71, 212, 208, 0.7);
+}
+.nx-stack-icon {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  background: rgba(244, 242, 236, 0.14);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -17,6 +17,7 @@ import { JOINTS, TrainerRig } from "./trainer-rig";
 import { trainerFootwear } from "./trainer-footwear";
 import { JumpTracker } from "./jump";
 import { TrainerPhoto } from "./trainer-photo";
+import { trainerFlip } from "../render/facing";
 
 /** Trainer mit vorab gerenderter Kniebeuge in Fotoqualität (tools/figuren/render_squat.py + pack_frames.py). */
 const TRAINER_PHOTOS: Record<string, string> = Object.fromEntries(
@@ -624,11 +625,13 @@ export class ArenaThree {
     const solo = !!frame.mode && frame.mode !== "arena";
     const soloAvatar = frame.mode === "avatar";
     const guidedAvatar = soloAvatar && frame.demo;
+    // Beim Training steht der Trainer in jeder Ansicht neben dir (Aufstellung wie in der Arena)
+    const side = !solo || !!frame.squat;
     // Standhöhe je Raumbild: um den Abstand zum Core Studio verschieben (dessen Feinabstimmung bleibt erhalten)
     const ground = this.groundShift(frame);
-    const playerX = solo ? 0.50 : compact ? 0.28 : 0.392;
-    const playerY = Math.min(0.95, (solo ? (compact ? 0.73 : 0.82) : compact ? 0.66 : 0.714) + ground.player);
-    const trainerX = compact ? 0.72 : 0.679;
+    const playerX = !side ? 0.50 : compact ? 0.26 : 0.36;
+    const playerY = Math.min(0.95, (!side ? (compact ? 0.73 : 0.82) : compact ? 0.66 : 0.714) + ground.player);
+    const trainerX = compact ? 0.74 : 0.70;
     const trainerY = Math.min(0.93, (compact ? 0.64 : 0.662) + ground.trainer);
     const pixelBudget = compact ? 420_000 : frame.studioRoom ? 1_120_000 : 650_000;
     const pxScale = Math.min(1, Math.sqrt(pixelBudget / (w * h)));
@@ -644,7 +647,7 @@ export class ArenaThree {
     this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld();
 
-    const baseDepth = compact ? -0.48 : soloAvatar ? 1.36 : solo ? 0.45 : 0.05;
+    const baseDepth = compact ? -0.48 : side ? 0.05 : soloAvatar ? 1.36 : 0.45;
     const playerPoint = this.place(playerX, playerY, baseDepth).clone();
     // Trainer steht neben dem Spieler auf (fast) derselben Tiefe – so haben beide im Raum dieselbe Körpergröße.
     // (Früher stand er auf der weiter hinten liegenden Bodenlinie des Raumbilds und wirkte dadurch deutlich kleiner.)
@@ -656,7 +659,7 @@ export class ArenaThree {
     this.player.root.position.set(playerPoint.x, 0, baseDepth);
     this.player.root.rotation.y = guidedAvatar ? 0.56 : solo ? 0 : 0.42;
     this.trainer.root.position.set(trainerXWorld, 0, trainerZ);
-    this.shadow.position.set(solo ? playerPoint.x : trainerXWorld, 0.009, solo ? baseDepth : trainerZ);
+    this.shadow.position.set(!side ? playerPoint.x : trainerXWorld, 0.009, !side ? baseDepth : trainerZ);
     this.shadow.material.uniforms.alpha!.value = soloAvatar ? 0.64 : 1;
     this.ring.group.visible = !soloAvatar;
     this.ring.group.position.set(playerPoint.x, 0.011, baseDepth);
@@ -671,16 +674,18 @@ export class ArenaThree {
     const flex = flexFrom(frame);
     const filmed = !solo && !frame.demo && !!frame.pose && !!frame.mask;
     const calm = reducedMotion();
-    this.trainer.root.visible = !solo;
+    this.trainer.root.visible = side;
     const guideFlex = frame.demo ? flex ?? 0 : squatFlex((frame.activeMs % GUIDE_CYCLE_MS) / GUIDE_CYCLE_MS, 94);
-    if (!solo) {
+    if (side) {
       this.trainer.pose(guideFlex);
       poseTrainerContours(this.trainerMesh, guideFlex, true);
     }
     // Foto-Trainer: gerendertes Bild zur Tiefe zeigen, das 3D-Netz dann ausblenden (Pose läuft für Schatten weiter)
-    const photo = this.trainerPhoto?.ready && !solo ? this.trainerPhoto : null;
-    this.trainer.root.traverse((node) => { if ((node as THREE.Mesh).isMesh) node.visible = !photo; });
-    if (photo) photo.update(guideFlex, this.trainer.root.position, this.trainerHeight, this.camera, frame.studioRoom?.light ? new THREE.Color(frame.studioRoom.light) : undefined);
+    const photo = this.trainerPhoto?.ready && side ? this.trainerPhoto : null;
+    // Foto-Trainer vorhanden, aber noch am Laden: 3D-Figur nicht zeigen (sonst blitzt kurz eine Spielfigur auf)
+    const showMesh = !photo && !this.trainerPhoto;
+    this.trainer.root.traverse((node) => { if ((node as THREE.Mesh).isMesh) node.visible = showMesh; });
+    if (photo) photo.update(guideFlex, this.trainer.root.position, this.trainerHeight, this.camera, frame.studioRoom?.light ? new THREE.Color(frame.studioRoom.light) : undefined, trainerFlip(frame.pose, frame.v.mirror));
     else this.trainerPhoto?.hide();
     const analytic = frame.mode === "muskel" || frame.mode === "zonen" || frame.mode === "gitter";
     // Du erscheinst als dein gewählter Avatar – in der Arena (neben dem Trainer) und in der Ansicht „Avatar“

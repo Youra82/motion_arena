@@ -48,11 +48,14 @@ describe("Arena-Anzeigedaten", () => {
     expect(isViewMode("arena-ungültig")).toBe(false);
     const getItem = vi.fn();
     vi.stubGlobal("localStorage", { getItem });
+    // alte Voreinstellung „Arena“ wird einmal auf Echtbild umgestellt; bewusst gewählte Arena (realView) bleibt
     getItem.mockReturnValue('{"defaultView":"arena","arenaRoom":"lebombo"}');
-    expect(loadSettings()).toMatchObject({ defaultView: "arena", arenaRoom: "lebombo" });
+    expect(loadSettings()).toMatchObject({ defaultView: "echtbild", arenaRoom: "lebombo" });
+    getItem.mockReturnValue('{"defaultView":"arena","realView":true}');
+    expect(loadSettings()).toMatchObject({ defaultView: "arena" });
     getItem.mockReturnValue('{"defaultView":"hybrid"}');
     expect(loadSettings()).toMatchObject({ defaultView: "hybrid", arenaRoom: "loft" });
     getItem.mockReturnValue('{"defaultView":"andere","arenaRoom":"../foo"}');
-    expect(loadSettings()).toMatchObject({ defaultView: "arena", arenaRoom: "loft" });
+    expect(loadSettings()).toMatchObject({ defaultView: "echtbild", arenaRoom: "loft" });
   });
 });
