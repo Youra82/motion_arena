@@ -170,7 +170,7 @@ function Finished({
   didSomething,
 }: {
   title: string;
-  origin: "program" | "custom";
+  origin: "program" | "custom" | "single";
   counted: boolean;
   programDone: ReturnType<typeof programView> | null;
   didSomething: boolean;

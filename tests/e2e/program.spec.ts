@@ -64,6 +64,17 @@ test("Programm-Einheit durchklicken zählt eine Einheit", async ({ page }) => {
   await expect(page.getByText(/Woche 1 · Tag 2/)).toBeVisible();
 });
 
+test("Übungen: jede Übung hat einen Startknopf", async ({ page }) => {
+  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
+  await expect(page.getByRole("button", { name: "▶ Training starten" })).toBeVisible(); // Kniebeugen (Kamera)
+  await page.getByRole("button", { name: /Halbe Kniebeuge/ }).click();
+  const start = page.getByRole("button", { name: /Übung starten/ });
+  await expect(start).toBeInViewport();
+  await start.click();
+  await expect(page.getByRole("heading", { name: "Halbe Kniebeuge", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Satz erledigt/ })).toBeVisible();
+});
+
 test("Baukasten rechnet Dauer mit und startet das eigene Training", async ({ page }) => {
   await programme(page);
   await page.getByRole("button", { name: /Selbst bauen/ }).click();

@@ -79,8 +79,16 @@ export function TrainingScreen() {
         {items.map((e) => {
           const isOpen = open === e.id;
           return (
-            <article key={e.id} className={`nx-ex ${isOpen ? "open" : ""}`}>
-              <button className="nx-ex-head" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : e.id)}>
+            <article key={e.id} id={`ex-${e.id}`} className={`nx-ex ${isOpen ? "open" : ""}`}>
+              <button
+                className="nx-ex-head"
+                aria-expanded={isOpen}
+                onClick={() => {
+                  setOpen(isOpen ? null : e.id);
+                  // Aufgeklappte Karte samt Startknopf ganz ins Bild holen
+                  if (!isOpen) requestAnimationFrame(() => document.getElementById(`ex-${e.id}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+                }}
+              >
                 <span className="nx-ex-img">
                   {e.tracked ? <img src={trainerPhoto(trainer.id)} alt="" /> : <Icon d={AREA_ICON[e.area]} size={34} />}
                   <span className="nx-ex-area">{e.area}</span>
@@ -96,35 +104,44 @@ export function TrainingScreen() {
               </button>
               {isOpen && (
                 <div className="nx-ex-body">
+                  {e.tracked ? (
+                    <>
+                      <div className="nx-ex-reps">
+                        <span className="muted small">Wiederholungen</span>
+                        <div className="segmented compact" role="group" aria-label="Anzahl Wiederholungen">
+                          {TARGETS.map((t) => (
+                            <button key={t} aria-pressed={t === target} onClick={() => actions.setTarget(t)}>
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <button className="btn btn-primary nx-wide" onClick={() => actions.openLive("camera", target)}>
+                        ▶ Training starten
+                      </button>
+                      {SHOW_DEMO && (
+                        <button className="btn btn-ghost" onClick={() => actions.openLive("demo", target)}>
+                          Demo ohne Kamera ansehen
+                        </button>
+                      )}
+                      <p className="muted small">Die Kamera zählt Wiederholungen und bewertet Tiefe, Tempo, Gleichmäßigkeit und Haltung (geschätzt).</p>
+                    </>
+                  ) : (
+                    <>
+                      <button className="btn btn-primary nx-wide" onClick={() => actions.startSingle(e.id)}>
+                        ▶ Übung starten · {e.measure === "reps" ? "3 × 10" : "2 × 30 s"}
+                      </button>
+                      <button className="btn btn-ghost nx-wide" onClick={() => actions.addToCustom(e.id)}>
+                        + Zum eigenen Training
+                      </button>
+                      <p className="muted small">Geführt mit Anleitung und Timer – du hakst jeden Satz ab. Kamera-Zählung gibt es bisher für Kniebeugen.</p>
+                    </>
+                  )}
                   <ol className="nx-cues">
                     {e.cues.map((c) => (
                       <li key={c}>{c}</li>
                     ))}
                   </ol>
-                  {e.tracked ? (
-                    <>
-                      <p className="muted small">Die Kamera zählt Wiederholungen und bewertet Tiefe, Tempo, Gleichmäßigkeit und Haltung (geschätzt).</p>
-                      <div className="segmented compact" role="group" aria-label="Anzahl Wiederholungen">
-                        {TARGETS.map((t) => (
-                          <button key={t} aria-pressed={t === target} onClick={() => actions.setTarget(t)}>
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="actions">
-                        <button className="btn btn-primary" onClick={() => actions.openLive("camera", target)}>
-                          ▶ Training starten
-                        </button>
-                        {SHOW_DEMO && (
-                          <button className="btn btn-ghost" onClick={() => actions.openLive("demo", target)}>
-                            Demo ohne Kamera ansehen
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <p className="muted small">Geführte Übung mit Anleitung und Timer – die Kamera-Zählung folgt später.</p>
-                  )}
                 </div>
               )}
             </article>

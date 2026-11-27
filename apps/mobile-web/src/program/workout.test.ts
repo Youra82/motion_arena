@@ -82,6 +82,21 @@ describe("Programm-Training", () => {
     expect(useApp.getState().workout!.steps[0]!.setsDone).toBe(1);
   });
 
+  it("jede einzelne Übung lässt sich direkt starten und dem eigenen Training hinzufügen", () => {
+    actions.startSingle("glute-bridge");
+    const w = useApp.getState().workout!;
+    expect(useApp.getState().screen).toBe("workout");
+    expect(w.origin).toBe("single");
+    expect(w.steps).toEqual([expect.objectContaining({ exerciseId: "glute-bridge", sets: 3, reps: 10 })]);
+    actions.startSingle("plank");
+    expect(useApp.getState().workout!.steps[0]).toEqual(expect.objectContaining({ sets: 2, seconds: 30 }));
+    useApp.setState({ custom: null });
+    actions.addToCustom("dead-bug");
+    actions.addToCustom("dead-bug");
+    expect(useApp.getState().custom!.steps.map((s) => s.exerciseId)).toEqual(["dead-bug"]);
+    expect(useApp.getState().screen).toBe("builder");
+  });
+
   it("eigenes Training startet und wird gespeichert", () => {
     actions.startCustom({ name: "Test", steps: [{ exerciseId: "glute-bridge", sets: 1, reps: 10 }] });
     expect(useApp.getState().custom?.name).toBe("Test");

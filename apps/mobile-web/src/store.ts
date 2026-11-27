@@ -54,7 +54,8 @@ export interface WorkoutStep extends Step {
 }
 
 export interface WorkoutRun {
-  origin: "program" | "custom";
+  /** program = Programm-Einheit, custom = eigenes Training, single = einzelne Übung aus „Übungen“. */
+  origin: "program" | "custom" | "single";
   title: string;
   steps: WorkoutStep[];
   /** Aktueller Schritt; gleich steps.length, wenn alles erledigt ist. */
@@ -342,6 +343,24 @@ export const actions = {
   startCustom(custom: CustomWorkout) {
     actions.saveCustom(custom);
     useApp.setState({ workout: toRun("custom", custom.name, custom.steps), screen: "workout", error: null, engineStatus: "idle" });
+  },
+  /** Einzelne Übung aus „Übungen“ als geführtes Training starten (Standard: 3 × 10 bzw. 2 × 30 s). */
+  startSingle(exerciseId: string) {
+    const e = exerciseById(exerciseId);
+    if (!e) return;
+    const step: Step = e.measure === "reps" ? { exerciseId, sets: 3, reps: 10 } : { exerciseId, sets: 2, seconds: 30 };
+    useApp.setState({ workout: toRun("single", e.name, [step]), screen: "workout", error: null, engineStatus: "idle" });
+  },
+  /** Übung ans eigene Training anhängen und den Baukasten öffnen. */
+  addToCustom(exerciseId: string) {
+    const e = exerciseById(exerciseId);
+    if (!e) return;
+    const cur = useApp.getState().custom ?? { name: "Mein Training", steps: [] };
+    if (!cur.steps.some((s) => s.exerciseId === exerciseId) && cur.steps.length < 12) {
+      const step: Step = e.measure === "reps" ? { exerciseId, sets: 3, reps: 10 } : { exerciseId, sets: 2, seconds: 30 };
+      actions.saveCustom({ ...cur, steps: [...cur.steps, step] });
+    }
+    actions.navigate("builder");
   },
   /** Aktuellen Satz als erledigt markieren. */
   workoutSetDone() {
