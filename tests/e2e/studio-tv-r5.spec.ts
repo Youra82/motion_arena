@@ -27,6 +27,11 @@ test("Avatar und Raum sind per Tastatur wählbar und haben zugängliche Zuständ
   await openStudio(page);
   const category = page.getByRole("group", { name: "Kategorie" });
   const all = category.getByRole("button", { name: "Alle", pressed: true });
+  const roleGroup = page.getByRole("group", { name: "Figur wählen für" });
+  await page.keyboard.press("Tab");
+  await expect(roleGroup.getByRole("button", { name: "Trainer", pressed: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(roleGroup.getByRole("button", { name: "Mein Avatar" })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Demo als Avatar ansehen" })).toBeFocused();
   await page.keyboard.press("Tab");
@@ -35,7 +40,7 @@ test("Avatar und Raum sind per Tastatur wählbar und haben zugängliche Zuständ
   await balance.focus();
   await page.keyboard.press("Space");
   await expect(balance).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("region", { name: "Avatar wählen" }).getByRole("button").filter({ hasText: "Aiko" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Trainer wählen" }).getByRole("button").filter({ hasText: "Aiko" })).toBeVisible();
   const aiko = page.getByRole("button", { name: /^Aiko,.*Intensität 2 von 5/ });
   await aiko.focus();
   await page.keyboard.press("Enter");
@@ -146,6 +151,7 @@ test("Gewählter Neon-Raum und Zara sind ohne Video auf Handy und TV gerendert",
   await expect(page.getByText("Mit dem Fernseher verbunden")).toBeVisible();
   await page.getByRole("button", { name: "Nein, nur Figur ohne Kamerabild" }).click();
   await page.getByRole("button", { name: "Avatar & Raum" }).click();
+  await page.getByRole("group", { name: "Figur wählen für" }).getByRole("button", { name: "Mein Avatar" }).click();
   await page.getByRole("button", { name: /^Zara,/ }).click();
   await page.getByRole("button", { name: /^Neon Arena,/ }).click();
   await page.getByRole("button", { name: "Demo als Avatar ansehen" }).click();
