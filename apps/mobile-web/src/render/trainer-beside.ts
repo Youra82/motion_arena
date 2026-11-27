@@ -69,9 +69,10 @@ export function drawTrainerBeside(ctx: CanvasRenderingContext2D, v: Viewport, f:
   // Sohle: Ferse/Zehen, falls erkannt – sonst Knöchel plus Knöchelhöhe (≈ 4 % der Körperhöhe)
   const soles = [seen(LM.LEFT_HEEL), seen(LM.RIGHT_HEEL), seen(LM.LEFT_FOOT_INDEX), seen(LM.RIGHT_FOOT_INDEX)].filter((p): p is [number, number] => !!p);
   const hips = [seen(LM.LEFT_HIP), seen(LM.RIGHT_HIP)].filter((p): p is [number, number] => !!p);
-  if (nose && feet.length && hips.length) {
-    const ankle = Math.max(...feet.map((p) => p[1]));
-    const px = (ankle - nose[1]) * 1.12; // Nase→Knöchel ≈ 89 % der Körperhöhe
+  const ankle = feet.length ? Math.max(...feet.map((p) => p[1])) : NaN;
+  const px = nose ? (ankle - nose[1]) * 1.12 : NaN; // Nase→Knöchel ≈ 89 % der Körperhöhe
+  // nur eine plausible, aufrechte Person übernehmen (Fehlerkennungen liefern sonst Füße über dem Kopf → negative Größe)
+  if (nose && hips.length && px > f.dh * 0.12) {
     const footNow = soles.length ? Math.max(ankle, ...soles.map((p) => p[1])) : ankle + px * 0.04;
     // im Maßstab des aktuellen Bildzuschnitts merken – so passt es auch direkt nach einem Ansichtswechsel
     stand = [...stand.filter((s) => now - s.at < 3000), { at: now, px: px / f.dh, foot: (footNow - f.oy) / f.dh }];
@@ -100,7 +101,9 @@ export function drawTrainerBeside(ctx: CanvasRenderingContext2D, v: Viewport, f:
     spot = { x, feetY, height };
     lastSpot = spot;
   }
-  if (!spot) spot = { x: v.cw * 0.74, feetY: v.ch * 0.86, height: v.ch * 0.5 };
+  // noch keine Person erkannt: rechts im Kamerabild, in üblicher Größe
+  if (!spot) spot = { x: f.ox + f.dw * 0.72, feetY: Math.min(v.ch * 0.86, f.oy + f.dh * 0.92), height: Math.min(v.ch * 0.5, f.dh * 0.62) };
+  if (!(spot.height > 1) || !Number.isFinite(spot.x) || !Number.isFinite(spot.feetY)) return;
 
   const scale = spot.height / meta.standPx;
   const dw = meta.size[0] * scale;

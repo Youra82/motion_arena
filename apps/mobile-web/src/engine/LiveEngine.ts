@@ -37,6 +37,7 @@ const needsMask = (m: ViewMode) => m === "silhouette" || m === "hybrid" || m ===
  * und zeichnet jedes Bild. Logik liegt in den Paketen; hier nur Ablaufsteuerung.
  */
 export class LiveEngine {
+  private besideWarned = false;
   private stream: MediaStream | null = null;
   private detector: PoseDetector | null = null;
   private demo: DemoSource | null = null;
@@ -418,7 +419,13 @@ export class LiveEngine {
         const session = useApp.getState().session;
         const guide = session.status === "running" ? squatFlex((activeTimeMs(session, now) % GUIDE_CYCLE_MS) / GUIDE_CYCLE_MS, 94) : 0;
         const real = this.source === "camera" && (state.viewMode === "echtbild" || state.viewMode === "hybrid");
-        drawTrainerBeside(ctx, v, fit, pose, state.settings.trainer, guide, now, real);
+        // Der Trainer ist eine Einblendung: ein Zeichenfehler darf das Training nie abbrechen
+        try {
+          drawTrainerBeside(ctx, v, fit, pose, state.settings.trainer, guide, now, real);
+        } catch (err) {
+          if (!this.besideWarned) console.warn("Trainer-Einblendung übersprungen:", err);
+          this.besideWarned = true;
+        }
       }
     }
   }
