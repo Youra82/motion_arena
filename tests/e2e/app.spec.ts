@@ -8,9 +8,10 @@ test("Demo: Kalibrierung → Training → Ansichtswechsel ohne Datenverlust → 
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Kniebeugen" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bereit fürs Training?" })).toBeVisible();
   await page.screenshot({ path: `${shots}/01-start.png` });
 
+  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
   await page.getByRole("button", { name: "Demo ohne Kamera ansehen" }).click();
   await expect(page.getByText("DEMO", { exact: true })).toBeVisible();
   await expect(page.getByText("Kalibrierung")).toBeVisible();
@@ -50,6 +51,7 @@ test("Demo: Kalibrierung → Training → Ansichtswechsel ohne Datenverlust → 
 
 test("Kamera verweigert → verständlicher Fehlerzustand mit Ausweg", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
   await page.getByRole("button", { name: "▶ Training starten" }).click();
   await expect(page.getByRole("alert")).toBeVisible({ timeout: 20_000 });
   await page.screenshot({ path: `${shots}/08-kamera-fehler.png` });
@@ -110,5 +112,5 @@ test("Analyse-Demo erkennt Stehen, Kniebeuge und Einbeinstand nacheinander; Been
   await expect(page.locator(".diagram-note")).toContainText("Oberschenkel");
   await expect(mv).toHaveText("Einbeinstand", { timeout: 8_000 });
   await page.getByRole("button", { name: "Analyse beenden" }).last().click();
-  await expect(page.getByRole("heading", { name: "Kniebeugen" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bereit fürs Training?" })).toBeVisible();
 });

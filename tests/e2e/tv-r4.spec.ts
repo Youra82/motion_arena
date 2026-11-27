@@ -22,6 +22,7 @@ test("Lokale Kopplung überträgt Live-Werte, Analyse, Demo-Kennzeichnung und Ho
   await join(phone, code);
   await phone.bringToFront();
   await phone.getByRole("button", { name: "Nein, nur Figur ohne Kamerabild" }).click();
+  await phone.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
   await phone.getByRole("button", { name: "Demo ohne Kamera ansehen" }).click();
   await expect(tv.locator(".tv-stage .chip-demo")).toHaveText("DEMO");
   await expect(tv.getByText(/Kamerabild am Handy nicht freigegeben/)).toBeVisible();
@@ -82,6 +83,7 @@ test("Das Demo-Ergebnis bleibt am Fernseher als Demo gekennzeichnet", async ({ c
   const tv = await context.newPage();
   await join(phone, await openTv(tv));
   await phone.getByRole("button", { name: "Nein, nur Figur ohne Kamerabild" }).click();
+  await phone.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
   await phone.getByRole("button", { name: "Demo ohne Kamera ansehen" }).click();
   await expect(tv.locator(".tv-stage .chip-demo")).toHaveText("DEMO");
   await phone.getByRole("button", { name: "Training beenden" }).click();

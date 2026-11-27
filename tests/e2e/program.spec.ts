@@ -9,9 +9,15 @@ test.beforeEach(async ({ page }) => {
 const programme = (page: import("@playwright/test").Page) =>
   page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Programme" }).click();
 
-test("Startseite zeigt nur das Training – Programme haben einen eigenen Menüpunkt", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: "Kniebeugen", level: 1 })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Programm erstellen|Für mich planen|Selbst bauen/ })).toHaveCount(0);
+test("Startseite ist ein Hauptmenü ohne Demo – Programme haben einen eigenen Bereich", async ({ page }) => {
+  await expect(page.getByRole("heading", { name: "Bereit fürs Training?", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Kniebeugen" })).toHaveCount(0);
+  const menu = page.getByRole("navigation", { name: "Hauptmenü" });
+  for (const t of ["Training", "Programme", "Körperanalyse", "Fortschritt", "Avatar & Raum", "Fernseher"]) {
+    await expect(menu.getByRole("button", { name: new RegExp(`^${t}`) })).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Training wählen" }).click();
+  await expect(page.getByRole("heading", { name: "Übungen", level: 1 })).toBeVisible();
   await programme(page);
   await expect(page.getByRole("button", { name: /Für mich planen/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Selbst bauen/ })).toBeVisible();
@@ -40,7 +46,7 @@ test("Planer: sechs Fragen → Programm mit Begründung → Startseite zeigt die
 
   await page.reload(); // Programm bleibt gespeichert
   await expect(page.getByText(/Kraft-Aufbau · Woche 1 · Tag 1/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Beine & Po", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Weiter: Beine & Po" })).toBeVisible();
 });
 
 test("Programm-Einheit durchklicken zählt eine Einheit", async ({ page }) => {

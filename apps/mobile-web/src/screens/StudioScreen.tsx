@@ -5,6 +5,7 @@ import { MainLayout } from "../components/common";
 import { AVATARS, AVATAR_CATEGORIES, avatarById, drawAvatar, type AvatarCategory, type AvatarDef } from "../render/avatars";
 import { ROOMS, drawRoom, roomById, type RoomDef } from "../render/rooms";
 import { conceptArt, conceptImage, drawCover, roomBackdrop } from "../render/concept-art";
+import { SHOW_DEMO } from "../demo-mode";
 import { actions, useApp } from "../store";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -163,9 +164,11 @@ export function StudioScreen() {
             Der gewählte Raum erscheint im Live-Training. Lukas hat ein bewegliches 3D-Modell. Die übrigen Porträts
             zeigen die Designvorlagen für die Avatare, deren Live-Figuren bisher in 2D animiert werden.
           </p>
-          <button className="btn btn-primary" onClick={() => actions.openLive("demo", target, "squat", "avatar")}>
-            Demo als Avatar ansehen
-          </button>
+          {SHOW_DEMO && (
+            <button className="btn btn-primary" onClick={() => actions.openLive("demo", target, "squat", "avatar")}>
+              Demo als Avatar ansehen
+            </button>
+          )}
         </div>
       </section>
 

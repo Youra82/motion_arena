@@ -56,6 +56,7 @@ test("Silhouette zeigt die Person (GPU-Maske), ohne WebGL-Lesefehler", async ({ 
   page.on("console", (m) => { if (/glReadPixels|GL_INVALID/.test(m.text())) glErrors.push(m.text()); });
 
   await page.goto(baseURL!);
+  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
   await page.getByRole("button", { name: "▶ Training starten" }).click();
   await expect(page.getByText("Erkennung gut")).toBeVisible({ timeout: 60_000 });
   await page.getByRole("button", { name: "Silhouette" }).click();

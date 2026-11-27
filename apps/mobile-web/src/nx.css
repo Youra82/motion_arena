@@ -94,8 +94,8 @@
 }
 .nx-coach {
   position: absolute;
-  right: 28%;
-  top: 92px;
+  right: 30%;
+  top: calc(max(var(--s4), env(safe-area-inset-top)) + 96px);
   max-width: 190px;
   margin: 0;
   padding: 10px 12px;
@@ -120,8 +120,8 @@
 }
 .nx-today h1 {
   margin: 0;
-  font-size: clamp(38px, 11vw, 56px);
-  line-height: 0.98;
+  font-size: clamp(34px, 9.6vw, 54px);
+  line-height: 1;
   font-weight: 800;
   letter-spacing: -0.02em;
   text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
@@ -129,7 +129,7 @@
 .nx-today > h1,
 .nx-today > .nx-meta,
 .nx-today > .nx-chip {
-  max-width: 64%;
+  max-width: 66%;
 }
 .nx-chip {
   padding: 5px 10px;
@@ -181,6 +181,70 @@
 .nx-demo {
   color: rgba(244, 242, 236, 0.9);
   font-size: 14px;
+}
+
+.nx-today .nx-hello {
+  font-size: 15px;
+  font-weight: 700;
+  color: #7fe6e2;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+.nx-start-note {
+  font-size: 13px;
+  color: rgba(244, 242, 236, 0.85);
+  max-width: 82%;
+}
+
+/* Hauptmenü der Startseite */
+.nx-hub {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3);
+}
+.nx-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 128px;
+  padding: var(--s4);
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid rgba(244, 242, 236, 0.07);
+  text-align: left;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.nx-tile:hover,
+.nx-tile:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(71, 212, 208, 0.5);
+}
+.nx-tile b {
+  font-size: 17px;
+  margin-top: 6px;
+}
+.nx-tile > span:last-child {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.nx-tile-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(71, 212, 208, 0.14);
+  color: #7fe6e2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.nx-tile.hot {
+  border-color: rgba(255, 112, 75, 0.55);
+  background: linear-gradient(160deg, rgba(255, 112, 75, 0.16), rgba(255, 112, 75, 0.04) 60%), var(--surface);
+}
+.nx-tile.hot .nx-tile-icon {
+  background: rgba(255, 112, 75, 0.2);
+  color: #ff8a6a;
 }
 
 /* Laufendes Training / Programmkarte */
@@ -1218,8 +1282,7 @@
   color: #7fe6e2;
 }
 .nx-ex.open .nx-ex-tag {
-  top: auto;
-  bottom: 8px;
+  top: 36px;
   left: 8px;
   right: auto;
 }
@@ -1478,7 +1541,8 @@
   .nx-stage {
     min-height: 560px;
   }
-  .nx-ex-grid {
+  .nx-ex-grid,
+  .nx-hub {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

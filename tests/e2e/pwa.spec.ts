@@ -32,7 +32,8 @@ test("Service Worker speichert die App – Start und Demo funktionieren danach o
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Kniebeugen" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bereit fürs Training?" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
   await page.getByRole("button", { name: "Demo ohne Kamera ansehen" }).click();
   await expect(page.getByText("DEMO", { exact: true })).toBeVisible();
   await expect(page.getByText("Kalibrierung")).toBeVisible();
@@ -81,6 +82,6 @@ test.describe("iPhone über QR-Code", () => {
 
 test("Am Desktop ohne Installationsangebot keine Karte", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Kniebeugen" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bereit fürs Training?" })).toBeVisible();
   await expect(page.getByRole("region", { name: "App installieren" })).toHaveCount(0);
 });

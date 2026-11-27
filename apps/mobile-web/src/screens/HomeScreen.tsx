@@ -10,7 +10,6 @@ import { usePhoneLink } from "../tv/phone-link";
 import { VERSION_LABEL } from "../version";
 import { programView } from "../program/view";
 
-const TARGETS = [5, 10, 15, 20];
 const base = import.meta.env.BASE_URL;
 
 function greeting(h: number): string {
@@ -32,44 +31,50 @@ export function useStage() {
   };
 }
 
+const TILE_ICONS = {
+  training: "M2 12h3M19 12h3M5 8v8M19 8v8M8 6v12M16 6v12M8 12h8",
+  programs: "M4 5h16v15H4zM4 10h16M9 3v4M15 3v4",
+  analysis: ICONS.analysis,
+  progress: "M5 20V13M10 20V8M15 20v-5M20 20V4",
+  studio: ICONS.studio,
+  tv: ICONS.tv,
+};
+
 /**
- * Hauptmenü „Heute“: großes Bühnenbild mit dem gewählten Trainer, darauf das heutige Training und ein Startknopf.
- * Mit Programm zeigt es die nächste Einheit samt Wochenfortschritt, ohne Programm den Schnellstart Kniebeugen und
- * den Weg zum eigenen Programm. Alle Zahlen stammen aus Programm und Verlauf – nichts ist erfunden.
+ * Startseite: Begrüßung in der eigenen Arena mit dem eigenen Trainer, ein klarer nächster Schritt (Training fortsetzen,
+ * nächste Programm-Einheit oder Training wählen) und darunter das Hauptmenü mit allen Bereichen. Alle Zahlen stammen
+ * aus Programm und gespeichertem Verlauf.
  */
 export function HomeScreen() {
-  const target = useApp((s) => s.targetReps);
   const program = useApp((s) => s.program);
   const workout = useApp((s) => s.workout);
+  const history = useApp((s) => s.history);
   const tvStatus = usePhoneLink((s) => s.status);
   const [tvOpen, setTvOpen] = useState(false);
   const { trainer, backdrop, roomName } = useStage();
   const view = program ? programView(program) : null;
-  const minutes = Math.max(1, Math.round((target * 3.2 + 15) / 60));
   const running = workout && workout.index < workout.steps.length ? workout : null;
+  const totalReps = history.reduce((t, e) => t + e.reps, 0);
   useEffect(() => {
     if (tvStatus === "connected") setTvOpen(false);
   }, [tvStatus]);
 
-  const coach = view
-    ? view.finished
-      ? "Du hast das ganze Programm geschafft – Zeit für das nächste Ziel!"
-      : view.doneThisWeek > 0
-        ? `Schon ${view.doneThisWeek} von ${view.plan.weekdays.length} Einheiten diese Woche – weiter so!`
-        : `Heute ${view.next.title} – ich zeige dir jede Übung.`
-    : "Ich mache jede Wiederholung vor – die Kamera zählt mit.";
+  const coach = running
+    ? `Wir waren bei ${running.title} – machen wir weiter?`
+    : view && !view.finished
+      ? `Heute steht ${view.next.title} an. Ich bin bereit!`
+      : history.length
+        ? "Schön, dass du wieder da bist!"
+        : `Hi, ich bin ${trainer.name}. Such dir aus, womit wir starten.`;
 
   return (
     <MainLayout className="nx-home">
-      <section className="nx-stage" aria-label="Dein Training heute">
+      <section className="nx-stage" aria-label="Willkommen">
         <img className="nx-stage-bg" src={backdrop} alt="" />
         <img className="nx-stage-trainer" src={trainerPhoto(trainer.id)} alt={`Trainer ${trainer.name}`} />
         <header className="nx-top">
-          <div>
-            <div className="nx-hello">{greeting(new Date().getHours())}</div>
-            <div className="nx-brand">
-              MOTION <span>ARENA</span>
-            </div>
+          <div className="nx-brand">
+            MOTION <span>ARENA</span>
           </div>
           <span className="app-version" title="Installierte Version">
             {VERSION_LABEL}
@@ -78,7 +83,7 @@ export function HomeScreen() {
             <button className="nx-round" aria-label={tvStatus === "connected" ? "Fernseher verbunden" : "Auf dem Fernseher zeigen"} onClick={() => setTvOpen(true)}>
               <Icon d={ICONS.tv} size={20} />
             </button>
-            <button className="nx-round" aria-label="Trainer und Arena wählen" onClick={() => actions.navigate("studio")}>
+            <button className="nx-round" aria-label="Profil und Einstellungen" onClick={() => actions.navigate("profile")}>
               <Icon d={ICONS.studio} size={20} />
             </button>
           </div>
@@ -86,74 +91,44 @@ export function HomeScreen() {
         <p className="nx-coach">{coach}</p>
 
         <div className="nx-today">
-          {view && !view.finished ? (
-            <>
-              <span className="nx-chip">
-                {view.name} · Woche {view.week} · Tag {view.dayInWeek}
+          <span className="nx-hello">{greeting(new Date().getHours())}</span>
+          <h1>Bereit fürs Training?</h1>
+          <p className="nx-meta">
+            Mit {trainer.name} · {roomName}
+          </p>
+          {running ? (
+            <button className="nx-start" onClick={() => actions.openWorkout()}>
+              <span className="nx-start-icon">
+                <Icon d={ICONS.play} size={16} />
               </span>
-              <h1>{view.next.title}</h1>
-              <p className="nx-meta">
-                {view.next.minutes} Min · {view.next.steps.length} Übungen · mit {trainer.name}
-              </p>
-              <button className="nx-start" onClick={() => actions.startProgramSession()}>
-                <span className="nx-start-icon">
-                  <Icon d={ICONS.play} size={16} />
-                </span>
-                Training starten
-              </button>
-            </>
-          ) : view && view.finished ? (
-            <>
-              <span className="nx-chip">{view.name} · abgeschlossen</span>
-              <h1>Programm geschafft!</h1>
-              <p className="nx-meta">{view.total} Einheiten erledigt</p>
-              <button className="nx-start" onClick={() => actions.navigate("programs")}>
-                <span className="nx-start-icon">
-                  <Icon d={ICONS.next} size={16} />
-                </span>
-                Zu den Programmen
-              </button>
-            </>
+              Training fortsetzen
+            </button>
+          ) : view && !view.finished ? (
+            <button className="nx-start" onClick={() => actions.startProgramSession()}>
+              <span className="nx-start-icon">
+                <Icon d={ICONS.play} size={16} />
+              </span>
+              Weiter: {view.next.title}
+            </button>
           ) : (
-            <>
-              <span className="nx-chip">Schnellstart · {roomName}</span>
-              <h1>Kniebeugen</h1>
-              <p className="nx-meta">
-                ca. {minutes} Min · Kamera zählt mit · mit {trainer.name}
-              </p>
-              <div className="segmented compact" role="group" aria-label="Anzahl Wiederholungen">
-                {TARGETS.map((t) => (
-                  <button key={t} aria-pressed={t === target} onClick={() => actions.setTarget(t)}>
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <button className="nx-start" onClick={() => actions.openLive("camera", target)}>
-                <span className="nx-start-icon">
-                  <Icon d={ICONS.play} size={16} />
-                </span>
-                <span className="sr-only">▶ </span>Training starten
-              </button>
-            </>
+            <button className="nx-start" onClick={() => actions.navigate("training")}>
+              <span className="nx-start-icon">
+                <Icon d={ICONS.next} size={16} />
+              </span>
+              Training wählen
+            </button>
           )}
-          <button className="link-btn nx-demo" onClick={() => actions.openLive("demo", target)}>
-            Demo ohne Kamera ansehen
-          </button>
+          {running ? (
+            <span className="nx-start-note">
+              Übung {running.index + 1} von {running.steps.length}
+            </span>
+          ) : view && !view.finished ? (
+            <span className="nx-start-note">
+              {view.name} · Woche {view.week} · Tag {view.dayInWeek} · {view.next.minutes} Min
+            </span>
+          ) : null}
         </div>
       </section>
-
-      {running && (
-        <button className="nx-resume" onClick={() => actions.openWorkout()}>
-          <Icon d={ICONS.play} />
-          <span>
-            <small>Training läuft</small>
-            <b>
-              {running.title} · Übung {running.index + 1} von {running.steps.length}
-            </b>
-          </span>
-          <span className="nx-resume-go">Fortsetzen</span>
-        </button>
-      )}
 
       {view && (
         <button className="nx-program-card" onClick={() => actions.navigate("program")}>
@@ -180,19 +155,23 @@ export function HomeScreen() {
         </button>
       )}
 
-      <nav className="nx-more" aria-label="Hauptmenü">
-        <button onClick={() => actions.navigate("training")}>
-          <Icon d={ICONS.analysis} />
-          Körperanalyse
-        </button>
-        <button onClick={() => actions.navigate("studio")}>
-          <Icon d={ICONS.studio} />
-          Avatar & Raum
-        </button>
-        <button onClick={() => setTvOpen(true)}>
-          <Icon d={ICONS.tv} />
-          {tvStatus === "connected" ? "Fernseher verbunden" : "Fernseher"}
-        </button>
+      <nav className="nx-hub" aria-label="Hauptmenü">
+        <HubTile icon={TILE_ICONS.training} title="Training" text="Übungen wählen – Kniebeugen zählt die Kamera" onClick={() => actions.navigate("training")} hot />
+        <HubTile
+          icon={TILE_ICONS.programs}
+          title="Programme"
+          text={view ? `${view.name} · ${view.finished ? "geschafft" : `Woche ${view.week}`}` : "Planen lassen oder selbst bauen"}
+          onClick={() => actions.navigate("programs")}
+        />
+        <HubTile icon={TILE_ICONS.analysis} title="Körperanalyse" text="Haltung und Bewegung live (geschätzt)" onClick={() => actions.navigate("training")} />
+        <HubTile
+          icon={TILE_ICONS.progress}
+          title="Fortschritt"
+          text={history.length ? `${history.length} Trainings · ${totalReps} Wiederholungen` : "Noch keine Trainings"}
+          onClick={() => actions.navigate("progress")}
+        />
+        <HubTile icon={TILE_ICONS.studio} title="Avatar & Raum" text={`${trainer.name} · ${roomName}`} onClick={() => actions.navigate("studio")} />
+        <HubTile icon={TILE_ICONS.tv} title="Fernseher" text={tvStatus === "connected" ? "verbunden" : "Groß auf dem TV zeigen"} onClick={() => setTvOpen(true)} />
       </nav>
 
       <InstallCard />
@@ -209,6 +188,18 @@ export function HomeScreen() {
 
       {tvOpen && <TvDialog onClose={() => setTvOpen(false)} />}
     </MainLayout>
+  );
+}
+
+function HubTile({ icon, title, text, onClick, hot = false }: { icon: string; title: string; text: string; onClick: () => void; hot?: boolean }) {
+  return (
+    <button className={`nx-tile${hot ? " hot" : ""}`} onClick={onClick}>
+      <span className="nx-tile-icon">
+        <Icon d={icon} size={24} />
+      </span>
+      <b>{title}</b>
+      <span>{text}</span>
+    </button>
   );
 }
 

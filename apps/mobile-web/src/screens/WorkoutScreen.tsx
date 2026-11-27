@@ -4,6 +4,7 @@ import { actions, useApp } from "../store";
 import { exerciseById } from "../program/catalog";
 import { programView } from "../program/view";
 import { avatarById } from "../render/avatars";
+import { SHOW_DEMO } from "../demo-mode";
 
 /**
  * Laufendes Training: eine Übung nach der anderen. Kniebeugen zählt die Kamera (Live-Training), die anderen Übungen
@@ -124,9 +125,11 @@ function Current({ trainerId }: { trainerId: string }) {
             <Icon d={ICONS.camera} size={18} /> Mit Kamera zählen
           </button>
           <div className="actions">
-            <button className="btn btn-ghost" onClick={() => actions.workoutLive("demo")}>
-              Demo
-            </button>
+            {SHOW_DEMO && (
+              <button className="btn btn-ghost" onClick={() => actions.workoutLive("demo")}>
+                Demo
+              </button>
+            )}
             <button className="btn btn-ghost" onClick={() => actions.workoutSetDone()}>
               Ohne Kamera abhaken
             </button>

@@ -3,6 +3,7 @@ import { ICONS, Icon, MainLayout, trainerPhoto } from "../components/common";
 import { actions, useApp } from "../store";
 import { EXERCISES, type Exercise } from "../program/catalog";
 import { AVATARS, avatarById } from "../render/avatars";
+import { SHOW_DEMO } from "../demo-mode";
 
 const TARGETS = [5, 10, 15, 20];
 
@@ -112,11 +113,13 @@ export function TrainingScreen() {
                       </div>
                       <div className="actions">
                         <button className="btn btn-primary" onClick={() => actions.openLive("camera", target)}>
-                          ▶ Mit Kamera starten
+                          ▶ Training starten
                         </button>
-                        <button className="btn btn-ghost" onClick={() => actions.openLive("demo", target)}>
-                          Demo
-                        </button>
+                        {SHOW_DEMO && (
+                          <button className="btn btn-ghost" onClick={() => actions.openLive("demo", target)}>
+                            Demo ohne Kamera ansehen
+                          </button>
+                        )}
                       </div>
                     </>
                   ) : (
@@ -138,9 +141,11 @@ export function TrainingScreen() {
           <button className="btn" onClick={() => actions.openLive("camera", target, "analysis")}>
             Analyse starten
           </button>
-          <button className="link-btn" onClick={() => actions.openLive("demo", target, "analysis")}>
-            Analyse-Demo ohne Kamera
-          </button>
+          {SHOW_DEMO && (
+            <button className="link-btn" onClick={() => actions.openLive("demo", target, "analysis")}>
+              Analyse-Demo ohne Kamera
+            </button>
+          )}
         </div>
       </section>
 

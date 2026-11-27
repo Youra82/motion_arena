@@ -29,6 +29,7 @@ test("TV zeigt dasselbe wie das Handy: koppeln, Zustimmung, Training, Ergebnis",
   await expect(phone.getByText(/Bild freigegeben – wird gesendet, sobald ein Training läuft/)).toBeVisible();
 
   // Training (Demo) am Handy → TV zeigt dieselbe Live-Anzeige
+  await phone.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
   await phone.getByRole("button", { name: "Demo ohne Kamera ansehen" }).first().click();
   const phoneReps = phone.locator(".hud-reps");
   const tvReps = tv.locator(".tv-stage .hud-reps");

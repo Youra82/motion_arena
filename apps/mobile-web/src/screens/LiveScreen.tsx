@@ -7,6 +7,7 @@ import { TvVideoConsent } from "../components/TvLink";
 import { StagePicker } from "../components/StagePicker";
 import { usePhoneLink } from "../tv/phone-link";
 import { arenaDpr } from "../arena/arena-renderer";
+import { SHOW_DEMO } from "../demo-mode";
 import { hasLiveStage } from "../view-modes";
 
 export function LiveScreen() {
@@ -146,9 +147,11 @@ export function LiveScreen() {
             <button className="btn btn-primary" onClick={() => actions.openLive(source, session.targetReps)}>
               Erneut versuchen
             </button>
-            <button className="btn" onClick={() => actions.openLive("demo", session.targetReps)}>
-              Demo ohne Kamera
-            </button>
+            {SHOW_DEMO && (
+              <button className="btn" onClick={() => actions.openLive("demo", session.targetReps)}>
+                Demo ohne Kamera
+              </button>
+            )}
             <button className="btn btn-ghost" onClick={() => actions.home()}>
               Zurück
             </button>

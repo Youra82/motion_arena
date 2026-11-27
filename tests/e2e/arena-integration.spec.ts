@@ -21,6 +21,7 @@ test("Arena lädt lokal bei Bedarf, rendert in 3D und zählt im Demo-Training", 
   expect((await cachedFiles()).some((url) => url.startsWith("/arena/"))).toBe(false);
   expect(requests.some((url) => /arena-three-|\.glb$/.test(url))).toBe(false); // keine Figur vor dem Training
 
+  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
   await page.getByRole("button", { name: "Demo ohne Kamera ansehen" }).click();
   await expect(page.locator(".modes").getByRole("button", { name: "Arena", exact: true })).toHaveAttribute("aria-pressed", "true");
   const canvas = page.getByLabel("Live-Ansicht mit Körpererkennung");
@@ -52,6 +53,7 @@ test("TV rendert die Arena und dasselbe HUD ohne Bildfreigabe", async ({ context
   const phone = await context.newPage();
   await phone.goto((await qr.getAttribute("data-pair-url"))!);
   await phone.getByRole("button", { name: "Nein, nur Figur ohne Kamerabild" }).click();
+  await phone.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
   await phone.getByRole("button", { name: "Demo ohne Kamera ansehen" }).click();
   const stage = tv.locator(".tv-stage");
   await expect(stage.locator("canvas.tv-video")).toHaveAttribute("data-arena-renderer", "3d", { timeout: 30_000 });

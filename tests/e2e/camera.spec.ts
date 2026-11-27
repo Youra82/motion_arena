@@ -23,6 +23,7 @@ test("Kamera: Modell lokal, 'Keine Person' ohne Wertung, Silhouette, Beenden –
   });
 
   await page.goto("/");
+  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
   await page.getByRole("button", { name: "▶ Training starten" }).click();
   await expect(page.getByText("Keine Person")).toBeVisible({ timeout: 45_000 });
   await expect(page.getByText(/Stell dich vor die Kamera/)).toBeVisible();
@@ -58,8 +59,9 @@ test("Laden abbrechen führt zurück zum Start", async ({ page }) => {
     await route.continue().catch(() => {});
   });
   await page.goto("/");
+  await page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("button", { name: "Übungen" }).click();
   await page.getByRole("button", { name: "▶ Training starten" }).click();
   await expect(page.getByText("Körpererkennung wird geladen")).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: "Abbrechen" }).click();
-  await expect(page.getByRole("heading", { name: "Kniebeugen" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bereit fürs Training?" })).toBeVisible();
 });
