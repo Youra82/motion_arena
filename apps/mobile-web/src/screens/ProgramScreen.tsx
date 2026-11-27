@@ -5,11 +5,19 @@ import { explain, phaseOf } from "../program/planner";
 import { programView } from "../program/view";
 import { useStage } from "./HomeScreen";
 
-const ADJUST: Array<{ v: -1 | 0 | 1; label: string; note: string }> = [
-  { v: -1, label: "Zu schwer", note: "Ab der nächsten Einheit leichter: weniger Wiederholungen und kürzere Haltezeiten." },
-  { v: 0, label: "Passt", note: "Normale Steigerung nach Plan." },
-  { v: 1, label: "Zu leicht", note: "Ab der nächsten Einheit fordernder: mehr Wiederholungen und längere Haltezeiten." },
-];
+/** Kurzer Name je Stufe 1–10. */
+const LEVEL_NAME = ["sehr leicht", "sehr leicht", "leicht", "leicht", "mittel", "mittel", "schwer", "schwer", "sehr schwer", "sehr schwer"];
+
+function levelNote(level: number): string {
+  const o = level - 5;
+  const head = `Stufe ${level} – ${LEVEL_NAME[level - 1]}`;
+  if (o === 0) return `${head}: so wie der Plan es vorsieht, normale Steigerung von Woche zu Woche.`;
+  const n = Math.abs(o);
+  const sets = o <= -3 ? " und wo möglich ein Satz weniger" : o >= 3 ? " und ein Satz mehr" : "";
+  return o < 0
+    ? `${head}: bis zu ${n} ${n === 1 ? "Wiederholung" : "Wiederholungen"} weniger und bis zu ${n * 5} s kürzer halten als Stufe 5${sets}.`
+    : `${head}: ${n} ${n === 1 ? "Wiederholung" : "Wiederholungen"} mehr und ${n * 5} s länger halten als Stufe 5${sets}.`;
+}
 
 /** Dein Programm: Steigerung über die Wochen, diese Woche, Anpassen. */
 export function ProgramScreen() {
@@ -38,7 +46,6 @@ export function ProgramScreen() {
 
   const v = programView(program);
   const why = explain(v.plan);
-  const adjust = ADJUST.find((a) => a.v === program.adjust)!;
   return (
     <MainLayout className="nx-program">
       <section className="nx-prog-hero">
@@ -109,17 +116,21 @@ export function ProgramScreen() {
 
       <section aria-labelledby="passt">
         <h2 id="passt" className="nx-section-title">
-          Passt es so?
+          Stufe
         </h2>
-        <div className="segmented" role="group" aria-label="Belastung anpassen">
-          {ADJUST.map((a) => (
-            <button key={a.v} aria-pressed={program.adjust === a.v} onClick={() => actions.adjustProgram(a.v)}>
-              {a.label}
+        <div className="nx-levels" role="group" aria-label="Stufe wählen">
+          {LEVEL_NAME.map((_, i) => (
+            <button key={i} aria-pressed={program.level === i + 1} aria-label={`Stufe ${i + 1} – ${LEVEL_NAME[i]}`} onClick={() => actions.setProgramLevel(i + 1)}>
+              {i + 1}
             </button>
           ))}
         </div>
+        <div className="nx-levels-scale" aria-hidden="true">
+          <span>leicht</span>
+          <span>schwer</span>
+        </div>
         <p className="nx-note" role="status">
-          {adjust.note}
+          {levelNote(program.level)}
         </p>
       </section>
 

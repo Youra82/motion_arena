@@ -1856,3 +1856,32 @@
     animation: none;
   }
 }
+
+/* Stufe 1–10 im Programm: zwei Reihen à fünf, Farbe steigt von leicht nach schwer */
+.nx-levels {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.nx-levels button {
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid rgba(244, 242, 236, 0.14);
+  background: rgba(38, 56, 62, 0.9);
+  color: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.nx-levels button[aria-pressed="true"] {
+  background: #ff704b;
+  border-color: #ff704b;
+  color: #1b0d07;
+}
+.nx-levels-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(244, 242, 236, 0.6);
+}

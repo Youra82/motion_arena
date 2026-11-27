@@ -39,7 +39,7 @@ export function programView(p: StoredProgram): ProgramView {
   const weekStart = (pos.week - 1) * per;
   const thisWeek: WeekEntry[] = plan.weekdays.map((weekday, slot) => {
     const index = weekStart + slot;
-    const s = sessionAt(plan, index, p.adjust);
+    const s = sessionAt(plan, index, p.level);
     return {
       index,
       weekday,
@@ -51,7 +51,7 @@ export function programView(p: StoredProgram): ProgramView {
   });
   const volume = (w: number) => {
     let t = 0;
-    for (let k = 0; k < per; k++) t += sessionAt(plan, (w - 1) * per + k, p.adjust).steps.reduce((a, s) => a + stepSeconds(s), 0);
+    for (let k = 0; k < per; k++) t += sessionAt(plan, (w - 1) * per + k, p.level).steps.reduce((a, s) => a + stepSeconds(s), 0);
     return t;
   };
   const vols = Array.from({ length: plan.weeks }, (_, i) => volume(i + 1));
@@ -64,7 +64,7 @@ export function programView(p: StoredProgram): ProgramView {
     finished,
     week: pos.week,
     dayInWeek: pos.slot + 1,
-    next: sessionAt(plan, nextIndex, p.adjust),
+    next: sessionAt(plan, nextIndex, p.level),
     nextWeekday: pos.weekday,
     thisWeek,
     doneThisWeek: Math.max(0, Math.min(per, done - weekStart)),

@@ -151,16 +151,23 @@ export function phaseRanges(plan: Plan): Array<{ name: string; from: number; to:
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-/** Satz-/Zeitvorgabe für eine Übung in einer Woche. adjust: −1 leichter, 0, +1 fordernder. */
-export function dose(e: Exercise, a: Answers, phase: number, adjust: number): Omit<Step, "exerciseId"> {
+/** Stufe 1 (sehr leicht) bis 10 (sehr schwer); 5 = Vorgabe des Plans. */
+export const LEVEL_DEFAULT = 5;
+export const LEVEL_MAX = 10;
+
+/** Satz-/Zeitvorgabe für eine Übung in einer Woche und Stufe (1–10, 5 = Plan). */
+export function dose(e: Exercise, a: Answers, phase: number, level: number = LEVEL_DEFAULT): Omit<Step, "exerciseId"> {
+  const o = clamp(Math.round(level), 1, LEVEL_MAX) - LEVEL_DEFAULT; // −4 … +5
   const lvl = a.level === "neu" ? 0 : a.level === "manchmal" ? 1 : 2;
-  const sets = clamp((lvl === 0 ? 2 : 3) + (phase >= 1 && lvl === 0 ? 1 : 0) + (adjust < 0 ? -1 : 0), 1, 4);
+  const baseSets = (lvl === 0 ? 2 : 3) + (phase >= 1 && lvl === 0 ? 1 : 0);
+  // Stufe 1–2: ein Satz weniger (nie unter zwei – ein einzelner Satz ist kaum ein Training); Stufe 8–10: einer mehr
+  const sets = clamp(baseSets + (o <= -3 && baseSets > 2 ? -1 : 0) + (o >= 3 ? 1 : 0), 2, 5);
   if (e.measure === "time") {
     const base = a.goal === "ausdauer" ? 30 : a.goal === "beweglich" ? 40 : 20;
-    return { sets, seconds: clamp(base + lvl * 10 + phase * 10 + adjust * 10, 15, 90) };
+    return { sets, seconds: clamp(base + lvl * 10 + phase * 10 + o * 5, 10, 120) };
   }
   const base = a.goal === "kraft" ? 8 : 10;
-  return { sets, reps: clamp(base + lvl * 2 + phase * 2 + adjust * 2, 5, 20) };
+  return { sets, reps: clamp(base + lvl * 2 + phase * 2 + o, 4, 25) };
 }
 
 /** Geschätzte Sekunden eines Schritts: Ausführung (3 s je Wiederholung) plus 30 s Pause je Satz. */
@@ -192,7 +199,7 @@ export function positionOf(plan: Plan, index: number): { week: number; slot: num
  * Die Einheit mit diesem Index (0 = erste). Übungen aus dem Schwerpunkt des Tages, bei Beschwerden ersetzt, so viele
  * wie in die gewünschte Zeit passen (mindestens zwei).
  */
-export function sessionAt(plan: Plan, index: number, adjust = 0): Session {
+export function sessionAt(plan: Plan, index: number, level: number = LEVEL_DEFAULT): Session {
   const a = plan.answers;
   const { week, slot } = positionOf(plan, clamp(index, 0, totalSessions(plan) - 1));
   const kind = plan.slots[slot]!;
@@ -208,7 +215,8 @@ export function sessionAt(plan: Plan, index: number, adjust = 0): Session {
     const rid = resolveExercise(id, a.pain);
     if (!rid || used.has(rid)) continue;
     const e = exerciseById(rid)!;
-    const step: Step = { exerciseId: rid, ...dose(e, a, phase, adjust) };
+    // Auswahl nach der normalen Stufe: die Stufe ändert nur Sätze/Wiederholungen, nicht welche Übungen drankommen
+    const step: Step = { exerciseId: rid, ...dose(e, a, phase) };
     const next = [...steps, step];
     const secs = WARMUP_SECONDS + next.reduce((t, s) => t + stepSeconds(s), 0);
     if (steps.length >= 2 && secs > budget) break;
@@ -216,7 +224,8 @@ export function sessionAt(plan: Plan, index: number, adjust = 0): Session {
     used.add(rid);
     if (steps.length >= 8) break;
   }
-  return { title: SLOT_LABEL[kind], steps, minutes: sessionMinutes(steps) };
+  const dosed = level !== LEVEL_DEFAULT ? steps.map((s) => ({ exerciseId: s.exerciseId, ...dose(exerciseById(s.exerciseId)!, a, phase, level) })) : steps;
+  return { title: SLOT_LABEL[kind], steps: dosed, minutes: sessionMinutes(dosed) };
 }
 
 /** Kurze Begründungen „Warum so?“ – direkt aus den Antworten. */

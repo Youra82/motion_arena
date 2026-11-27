@@ -69,16 +69,16 @@ describe("Programm-Planer", () => {
     expect(knee).toContain("half-squat");
   });
 
-  it("steigert die Belastung über die Phasen und reagiert auf „zu schwer/zu leicht“", () => {
+  it("steigert die Belastung über die Phasen und reagiert auf die Stufe", () => {
     const p = createPlan(base);
     expect(phaseRanges(p).map((r) => r.name)).toEqual(["Grundlage", "Aufbau", "Steigerung"]);
     expect([1, 3, 6].map((w) => phaseOf(p, w))).toEqual([0, 1, 2]);
-    const squatOf = (i: number, adj = 0) => sessionAt(p, i, adj).steps.find((s) => s.exerciseId === "squat")!;
+    const squatOf = (i: number, level = 5) => sessionAt(p, i, level).steps.find((s) => s.exerciseId === "squat")!;
     const w1 = squatOf(0);
     const w6 = squatOf(15);
     expect(w6.sets * (w6.reps ?? 0)).toBeGreaterThan(w1.sets * (w1.reps ?? 0));
-    expect(squatOf(0, -1).reps!).toBeLessThan(w1.reps!);
-    expect(squatOf(0, 1).reps!).toBeGreaterThan(w1.reps!);
+    expect(squatOf(0, 3).reps!).toBeLessThan(w1.reps!);
+    expect(squatOf(0, 7).reps!).toBeGreaterThan(w1.reps!);
   });
 
   it("rechnet Woche und Wochentag einer Einheit aus", () => {
@@ -103,5 +103,26 @@ describe("Programm-Planer", () => {
     expect(isAnswers({ ...base, days: 7 })).toBe(false);
     expect(isAnswers({ ...base, focus: ["arme"] })).toBe(false);
     expect(isAnswers(null)).toBe(false);
+  });
+});
+
+describe("Stufe 1–10", () => {
+  it("ändert nur Sätze/Wiederholungen – dieselben Übungen, je höher die Stufe, desto länger", () => {
+    for (const goal of ["kraft", "ausdauer", "beweglich"] as const)
+      for (const level of ["neu", "regel"] as const) {
+        const plan = createPlan({ ...base, goal, level, days: 4, pain: "ruecken" });
+        for (const i of [0, 1, 5, 20]) {
+          const all = Array.from({ length: 10 }, (_, k) => sessionAt(plan, i, k + 1));
+          const ids = all.map((s) => s.steps.map((x) => x.exerciseId).join(","));
+          expect(new Set(ids).size).toBe(1);
+          for (let k = 1; k < 10; k++) expect(all[k]!.minutes).toBeGreaterThanOrEqual(all[k - 1]!.minutes);
+          expect(all[9]!.minutes).toBeGreaterThan(all[0]!.minutes);
+          expect(Math.min(...all[0]!.steps.map((s) => s.sets))).toBeGreaterThanOrEqual(2);
+        }
+      }
+  });
+  it("Stufe 5 ist der Plan selbst", () => {
+    const plan = createPlan(base);
+    expect(sessionAt(plan, 3, 5)).toEqual(sessionAt(plan, 3));
   });
 });

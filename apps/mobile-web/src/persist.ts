@@ -148,8 +148,8 @@ export interface StoredProgram {
   answers: Answers;
   /** Abgeschlossene Einheiten. */
   done: number;
-  /** −1 leichter, 0 normal, +1 fordernder („Passt es so?“). */
-  adjust: -1 | 0 | 1;
+  /** Stufe 1 (sehr leicht) bis 10 (sehr schwer); 5 = Vorgabe des Plans. */
+  level: number;
   startedAt: string;
   /** Eigener Name (fertige Programme), sonst der Name aus dem Ziel. */
   name?: string;
@@ -164,10 +164,11 @@ export function loadProgram(): StoredProgram | null {
   const v = read<Record<string, unknown>>(PROGRAM_KEY);
   if (!v || typeof v !== "object" || !isAnswers(v.answers)) return null;
   const done = Number.isInteger(v.done) && (v.done as number) >= 0 ? (v.done as number) : 0;
-  const adjust = v.adjust === -1 || v.adjust === 1 ? v.adjust : 0;
+  // früher „zu schwer / passt / zu leicht“ (adjust −1/0/+1) → Stufe 3/5/7
+  const level = Number.isInteger(v.level) && (v.level as number) >= 1 && (v.level as number) <= 10 ? (v.level as number) : v.adjust === -1 ? 3 : v.adjust === 1 ? 7 : 5;
   const startedAt = typeof v.startedAt === "string" && Number.isFinite(Date.parse(v.startedAt)) ? v.startedAt : new Date(0).toISOString();
   const name = typeof v.name === "string" && v.name.trim() ? v.name.slice(0, 40) : undefined;
-  return { answers: v.answers, done, adjust, startedAt, ...(name ? { name } : {}) };
+  return { answers: v.answers, done, level, startedAt, ...(name ? { name } : {}) };
 }
 
 /** null entfernt das Programm. */

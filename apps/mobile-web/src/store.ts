@@ -316,7 +316,7 @@ export const actions = {
   },
   /** Neues Programm aus den Planer-Antworten anlegen (ersetzt ein laufendes). */
   createProgram(answers: Answers, name?: string) {
-    const program: StoredProgram = { answers, done: 0, adjust: 0, startedAt: new Date().toISOString(), ...(name ? { name } : {}) };
+    const program: StoredProgram = { answers, done: 0, level: 5, startedAt: new Date().toISOString(), ...(name ? { name } : {}) };
     saveProgram(program);
     useApp.setState({ program });
     actions.updateSettings({ weeklyGoal: answers.days });
@@ -325,11 +325,11 @@ export const actions = {
     saveProgram(null);
     useApp.setState({ program: null });
   },
-  /** „Zu schwer / zu leicht“: Belastung ab der nächsten Einheit anpassen. */
-  adjustProgram(adjust: -1 | 0 | 1) {
+  /** Stufe 1–10: Belastung ab der nächsten Einheit anpassen. */
+  setProgramLevel(level: number) {
     useApp.setState((s) => {
       if (!s.program) return {};
-      const program = { ...s.program, adjust };
+      const program = { ...s.program, level: Math.max(1, Math.min(10, Math.round(level))) };
       saveProgram(program);
       return { program };
     });
@@ -340,7 +340,7 @@ export const actions = {
     if (!p) return;
     const plan = createPlan(p.answers);
     const index = Math.min(p.done, totalSessions(plan) - 1);
-    const session = sessionAt(plan, index, p.adjust);
+    const session = sessionAt(plan, index, p.level);
     useApp.setState({ workout: toRun("program", session.title, session.steps, index), screen: "workout", error: null, engineStatus: "idle" });
   },
   saveCustom(custom: CustomWorkout) {
